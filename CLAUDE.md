@@ -4,17 +4,19 @@
 CLI tool to generate subtitles from video/audio files using OpenAI Whisper AI model.
 
 ## Requirements
-- Extract audio from video files
+- Extract audio from video files or YouTube URLs
 - Transcribe audio using Whisper AI (speech-to-text)
 - Output SRT format (with timestamps)
 - Output plain text format (for easy reading)
 - Support common video formats: MP4, MKV, AVI, MOV, WebM
+- Support YouTube and 1000+ other video platforms via URLs
 
 ## Technical Stack
 - **Python 3.11+**
 - **Poetry** for package management
-- **OpenAI Whisper** for AI transcription
+- **Faster Whisper** for AI transcription
 - **ffmpeg** (system dependency) for audio extraction
+- **yt-dlp** for downloading videos from URLs
 
 ## Output Files
 For input `video.mp4`:
@@ -30,22 +32,26 @@ For input `video.mp4`:
 ```
 video-subtitle/
 ├── src/
-│   ├── transcriber.py    # Whisper transcription logic
-│   ├── subtitle_writer.py # SRT and TXT file generation
-│   └── audio_extractor.py # Audio extraction from video
-├── main.py               # CLI entry point
+│   ├── transcriber.py      # Whisper transcription logic
+│   ├── subtitle_writer.py  # SRT and TXT file generation
+│   ├── audio_extractor.py  # Audio extraction from video
+│   └── video_downloader.py # YouTube/URL video downloading
+├── main.py                 # CLI entry point
 ├── tests/
 │   ├── test_transcriber.py
 │   ├── test_subtitle_writer.py
-│   └── test_audio_extractor.py
+│   ├── test_audio_extractor.py
+│   ├── test_video_downloader.py
+│   └── test_main_integration.py
 ├── pyproject.toml
 └── CLAUDE.md
 ```
 
 ## Dependencies
-- openai-whisper
+- faster-whisper
 - ffmpeg-python (Python wrapper)
 - click (for CLI interface)
+- yt-dlp (for downloading videos from URLs)
 - pytest (for testing)
 
 ## Current Status
@@ -53,18 +59,25 @@ video-subtitle/
 
 All core features implemented and tested:
 - ✅ Audio extraction from video files
+- ✅ YouTube URL support (and 1000+ other platforms via yt-dlp)
 - ✅ AI transcription using Faster Whisper
 - ✅ SRT subtitle file generation
 - ✅ Plain text file generation
 - ✅ CLI interface with options
-- ✅ 20/20 unit tests passing
+- ✅ 43/43 unit tests passing
 
 ## Usage
 
 ### Basic Usage
 ```bash
-# Extract subtitles from a video
+# Extract subtitles from a local video file
 python main.py video.mp4
+
+# Extract subtitles from a YouTube URL
+python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Short YouTube URL format
+python main.py "https://youtu.be/VIDEO_ID"
 
 # This creates:
 # - video.srt (subtitle file with timestamps)
@@ -77,13 +90,25 @@ python main.py video.mp4
 python main.py video.mp4 --model medium
 
 # Specify language (faster than auto-detect)
-python main.py video.mp4 --language en
+python main.py "https://youtube.com/watch?v=VIDEO_ID" --language en
 
 # Save to a different directory
 python main.py video.mp4 --output ./subtitles
 
 # Keep the extracted audio file
 python main.py video.mp4 --keep-audio
+```
+
+### YouTube URL Support
+```bash
+# Process any YouTube video
+python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Works with playlists, shorts, and other platforms
+python main.py "https://vimeo.com/123456"
+
+# Downloaded videos are saved to /tmp (OS cleans up automatically)
+# Subtitles are named after the video title
 ```
 
 ### Available Models
@@ -103,8 +128,9 @@ poetry run pytest tests/test_transcriber.py -v
 ```
 
 ## Next Steps (Optional Enhancements)
-- Add support for batch processing multiple videos
+- Add support for batch processing multiple videos/URLs
 - Add progress bars for long videos
 - Support for additional subtitle formats (VTT, ASS)
 - GPU acceleration support (CUDA)
+- Playlist support (download and process all videos from a playlist)
 - Web interface

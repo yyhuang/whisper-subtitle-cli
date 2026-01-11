@@ -1,9 +1,10 @@
 # Video Subtitle Extractor
 
-Extract subtitles from video files using AI transcription (OpenAI Whisper). Generates both SRT files for video playback and plain text files for easy reading.
+Extract subtitles from video files or YouTube URLs using AI transcription (OpenAI Whisper). Generates both SRT files for video playback and plain text files for easy reading.
 
 ## Features
 
+- **YouTube URL Support**: Process videos directly from YouTube and 1000+ other platforms
 - **AI-Powered Transcription**: Uses Faster Whisper for accurate speech-to-text
 - **Dual Output**: Creates both SRT (with timestamps) and TXT (plain text) files
 - **Multiple Languages**: Auto-detects language or accepts manual specification
@@ -42,15 +43,23 @@ poetry install --no-root
 
 ### Basic Usage
 
-Extract subtitles from a video file:
+Extract subtitles from a local video file:
 
 ```bash
 python main.py video.mp4
 ```
 
+Extract subtitles from a YouTube URL:
+
+```bash
+python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+```
+
 This creates two files:
-- `video.srt` - Subtitle file with timestamps (for video players)
-- `video.txt` - Plain text transcript (for reading)
+- `video.srt` or `Video_Title.srt` - Subtitle file with timestamps (for video players)
+- `video.txt` or `Video_Title.txt` - Plain text transcript (for reading)
+
+**Note**: When processing URLs, videos are downloaded to `/tmp` and cleaned up automatically by your OS.
 
 ### Advanced Options
 
@@ -59,13 +68,29 @@ This creates two files:
 python main.py video.mp4 --model medium
 
 # Specify the language (faster than auto-detect)
-python main.py video.mp4 --language en
+python main.py "https://youtube.com/watch?v=VIDEO_ID" --language en
 
 # Save output to a specific directory
 python main.py video.mp4 --output ./subtitles
 
 # Keep the extracted audio file
 python main.py video.mp4 --keep-audio
+```
+
+### YouTube URL Examples
+
+```bash
+# Standard YouTube URL
+python main.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+# Short YouTube URL
+python main.py "https://youtu.be/dQw4w9WgXcQ"
+
+# Other platforms (Vimeo, Twitch, etc.)
+python main.py "https://vimeo.com/123456"
+
+# With options
+python main.py "https://youtube.com/watch?v=VIDEO_ID" --model small --language en --output ./subtitles
 ```
 
 ### Model Options
@@ -97,16 +122,23 @@ Common language codes (or use auto-detect by omitting):
 # Process an English video with the base model (default)
 python main.py lecture.mp4
 
+# Process a YouTube video
+python main.py "https://www.youtube.com/watch?v=abc123"
+
 # Process a Chinese video with high accuracy
 python main.py chinese_video.mp4 --model medium --language zh
 
+# Process a YouTube video in Spanish with high accuracy
+python main.py "https://youtu.be/xyz789" --model medium --language es
+
 # Process multiple videos (one at a time)
 python main.py video1.mp4
-python main.py video2.mp4
+python main.py "https://youtube.com/watch?v=video2"
 
 # Save all outputs to a subtitles folder
 mkdir subtitles
 python main.py video.mp4 --output ./subtitles
+python main.py "https://youtube.com/watch?v=abc" --output ./subtitles
 ```
 
 ## Output Format
@@ -129,8 +161,9 @@ Hello, world!
 This is a test.
 ```
 
-## Supported Video Formats
+## Supported Video Sources
 
+### Local Files
 Any format supported by ffmpeg:
 - MP4
 - MKV
@@ -139,6 +172,14 @@ Any format supported by ffmpeg:
 - WebM
 - FLV
 - and many more
+
+### URLs (via yt-dlp)
+- YouTube (youtube.com, youtu.be)
+- Vimeo
+- Twitch
+- Dailymotion
+- And 1000+ other video platforms
+- See [yt-dlp supported sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 
 ## Development
 
@@ -157,13 +198,20 @@ poetry run pytest tests/test_transcriber.py -v
 ```
 video-subtitle/
 ├── src/
-│   ├── audio_extractor.py    # Extract audio from video
-│   ├── transcriber.py         # AI transcription
-│   └── subtitle_writer.py     # Write SRT and TXT files
-├── tests/                     # Unit tests
-├── main.py                    # CLI entry point
-├── pyproject.toml             # Poetry dependencies
-└── CLAUDE.md                  # Project documentation
+│   ├── audio_extractor.py     # Extract audio from video
+│   ├── transcriber.py          # AI transcription
+│   ├── subtitle_writer.py      # Write SRT and TXT files
+│   └── video_downloader.py     # Download videos from URLs
+├── tests/                      # Unit and integration tests
+│   ├── test_audio_extractor.py
+│   ├── test_transcriber.py
+│   ├── test_subtitle_writer.py
+│   ├── test_video_downloader.py
+│   └── test_main_integration.py
+├── main.py                     # CLI entry point
+├── pyproject.toml              # Poetry dependencies
+├── README.md                   # User documentation
+└── CLAUDE.md                   # Project documentation
 ```
 
 ## Troubleshooting
