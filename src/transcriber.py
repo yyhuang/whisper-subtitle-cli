@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 class Transcriber:
     """Transcribes audio files using Faster Whisper."""
 
-    def __init__(self, model_size: str = "base", device: str = "cpu"):
+    def __init__(self, model_size: str = "medium", device: str = "cpu"):
         """
         Initialize the transcriber with a Whisper model.
 

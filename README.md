@@ -129,9 +129,9 @@ Downloading English subtitle...
 | Model | Size | Speed | Accuracy | Use Case |
 |-------|------|-------|----------|----------|
 | tiny | ~39MB | Fastest | Basic | Quick tests, simple audio |
-| base | ~140MB | Fast | Good | **Default - balanced** |
+| base | ~140MB | Fast | Good | Faster alternative |
 | small | ~470MB | Moderate | Better | Clear speech, important content |
-| medium | ~1.5GB | Slow | High | Professional use |
+| medium | ~1.5GB | Slow | High | **Default - Professional use** |
 | large | ~2.9GB | Slowest | Best | Maximum accuracy needed |
 
 ### Language Codes
@@ -150,7 +150,7 @@ Common language codes (or use auto-detect by omitting):
 ## Examples
 
 ```bash
-# Process an English video with the base model (default)
+# Process an English video with the medium model (default)
 python main.py lecture.mp4
 
 # Process a YouTube video
@@ -257,7 +257,7 @@ Make sure you're running the script from the project root directory.
 Use a smaller model (`--model tiny` or `--model base`) or specify the language to avoid auto-detection.
 
 ### Out of memory
-Use a smaller model. The `base` model uses ~1GB RAM, while `large` needs ~10GB.
+Use a smaller model. The `medium` (default) model uses ~2GB RAM, while `large` needs ~10GB. Use `--model base` or `--model tiny` for lower memory usage.
 
 ## License
 

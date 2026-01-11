@@ -24,7 +24,7 @@ For input `video.mp4`:
 - `video.txt` - Plain text transcript without timestamps
 
 ## Configuration Options
-- Whisper model size: tiny, base, small, medium, large (default: base)
+- Whisper model size: tiny, base, small, medium, large (default: medium)
 - Language: auto-detect or specify (e.g., en, zh, es)
 - Output directory
 
@@ -143,9 +143,9 @@ Downloading English subtitle...
 
 ### Available Models
 - **tiny**: Fastest, least accurate (~39MB)
-- **base**: Good balance (default, ~140MB)
+- **base**: Good balance (~140MB)
 - **small**: Better accuracy (~470MB)
-- **medium**: High accuracy (~1.5GB)
+- **medium**: High accuracy (default, ~1.5GB)
 - **large**: Best accuracy (~2.9GB)
 
 ## Testing

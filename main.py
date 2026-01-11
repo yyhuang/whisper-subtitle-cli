@@ -37,7 +37,7 @@ class VideoInput(click.ParamType):
 @click.argument('video_input', type=VideoInput())
 @click.option(
     '--model',
-    default='base',
+    default='medium',
     type=click.Choice(['tiny', 'base', 'small', 'medium', 'large'], case_sensitive=False),
     help='Whisper model size (larger = more accurate but slower)'
 )

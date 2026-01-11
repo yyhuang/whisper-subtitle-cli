@@ -13,10 +13,10 @@ class TestTranscriber:
         transcriber = Transcriber(model_size="tiny")
         assert transcriber.model_size == "tiny"
 
-    def test_transcriber_default_model_is_base(self):
-        """Test that default model is 'base'."""
+    def test_transcriber_default_model_is_medium(self):
+        """Test that default model is 'medium'."""
         transcriber = Transcriber()
-        assert transcriber.model_size == "base"
+        assert transcriber.model_size == "medium"
 
     def test_transcribe_returns_segments(self):
         """Test that transcribe method exists and has correct signature."""
