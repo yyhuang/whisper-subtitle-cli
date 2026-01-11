@@ -60,11 +60,12 @@ video-subtitle/
 All core features implemented and tested:
 - ✅ Audio extraction from video files
 - ✅ YouTube URL support (and 1000+ other platforms via yt-dlp)
+- ✅ Subtitle download from YouTube (human-made subtitles only)
 - ✅ AI transcription using Faster Whisper
 - ✅ SRT subtitle file generation
 - ✅ Plain text file generation
 - ✅ CLI interface with options
-- ✅ 43/43 unit tests passing
+- ✅ 51/51 unit tests passing
 
 ## Usage
 
@@ -110,6 +111,35 @@ python main.py "https://vimeo.com/123456"
 # Downloaded videos are saved to /tmp (OS cleans up automatically)
 # Subtitles are named after the video title
 ```
+
+### Subtitle Download (YouTube)
+When processing a YouTube URL, the tool automatically checks for existing subtitles:
+
+```bash
+python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Output:
+Checking for available subtitles...
+
+Available subtitles:
+  1. English (en)
+  2. Spanish (es)
+  3. French (fr)
+  0. Transcribe video instead
+
+Which subtitle would you like to download? [0]: 1
+
+Downloading English subtitle...
+✓ Subtitle downloaded: Video_Title.srt
+✅ Done!
+```
+
+**Features**:
+- Only shows human-made subtitles (auto-generated are filtered out)
+- Much faster than transcription (~1 second vs 30-120 seconds)
+- If no subtitles exist, automatically falls back to transcription
+- Option 0 allows transcription even when subtitles are available
+- Only creates SRT file when downloading subtitles (no TXT file)
 
 ### Available Models
 - **tiny**: Fastest, least accurate (~39MB)

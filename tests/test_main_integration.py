@@ -26,6 +26,10 @@ class TestMainWithURLInput:
             # Mock VideoDownloader
             mock_downloader_instance = MagicMock()
             mock_downloader.return_value = mock_downloader_instance
+
+            # Mock subtitle check - return empty (no subtitles)
+            mock_downloader_instance.get_available_subtitles.return_value = {}
+
             mock_downloader_instance.download.return_value = {
                 'file_path': f'{tmpdir}/abc123.mp4',
                 'title': 'Test Video Title',
@@ -81,6 +85,10 @@ class TestMainWithURLInput:
             # Mock VideoDownloader instance with download method
             mock_downloader_instance = MagicMock()
             mock_downloader.return_value = mock_downloader_instance
+
+            # Mock subtitle check - return empty (no subtitles)
+            mock_downloader_instance.get_available_subtitles.return_value = {}
+
             mock_downloader_instance.download.return_value = {
                 'file_path': f'{tmpdir}/xyz789.mp4',
                 'title': 'My Test Video: Part 1',  # Contains characters that need sanitizing

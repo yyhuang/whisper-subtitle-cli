@@ -97,6 +97,161 @@ class VideoDownloader:
         """
         return is_url(url)
 
+    def get_available_subtitles(self, url: str) -> Dict[str, Dict]:
+        """
+        Get list of available subtitles for a video.
+
+        Only returns human-made subtitles (filters out auto-generated).
+
+        Args:
+            url: Video URL to check
+
+        Returns:
+            Dictionary mapping language codes to subtitle info:
+            {
+                'en': {'name': 'English', 'ext': 'srt'},
+                'es': {'name': 'Spanish', 'ext': 'srt'},
+                ...
+            }
+            Returns empty dict if no manual subtitles available.
+        """
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Get video info without downloading
+                info = ydl.extract_info(url, download=False)
+
+                # Get manual subtitles only (ignore automatic_captions)
+                subtitles = info.get('subtitles', {})
+
+                # Build result dictionary with language names
+                result = {}
+                for lang_code, sub_list in subtitles.items():
+                    if sub_list:  # Check if subtitle list is not empty
+                        result[lang_code] = {
+                            'name': self._get_language_name(lang_code),
+                            'ext': sub_list[0].get('ext', 'srt')
+                        }
+
+                return result
+
+        except Exception as e:
+            # If we can't get subtitles, return empty dict
+            return {}
+
+    def download_subtitle(self, url: str, language: str, output_path: str) -> str:
+        """
+        Download subtitle file for a specific language.
+
+        Args:
+            url: Video URL
+            language: Language code (e.g., 'en', 'es')
+            output_path: Where to save the subtitle file
+
+        Returns:
+            Path to downloaded subtitle file
+
+        Raises:
+            Exception: If download fails
+        """
+        # Extract base path without extension
+        base_path = str(Path(output_path).with_suffix(''))
+
+        ydl_opts = {
+            'writesubtitles': True,  # Enable subtitle download
+            'subtitleslangs': [language],  # Specific language
+            'subtitlesformat': 'srt',  # Force SRT format
+            'skip_download': True,  # Don't download video
+            'outtmpl': base_path,  # Base path for output
+            'quiet': True,
+            'no_warnings': True,
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+
+            # yt-dlp saves subtitles as: base_path.lang.srt
+            # We need to rename it to the output_path
+            downloaded_path = f"{base_path}.{language}.srt"
+            if os.path.exists(downloaded_path):
+                # Rename to the desired output path
+                os.rename(downloaded_path, output_path)
+                return output_path
+            else:
+                raise Exception(f"Subtitle file not found after download: {downloaded_path}")
+
+        except Exception as e:
+            raise Exception(f"Subtitle download failed: {str(e)}")
+
+    def get_video_info(self, url: str) -> Dict[str, any]:
+        """
+        Get video metadata without downloading.
+
+        Args:
+            url: Video URL
+
+        Returns:
+            Dictionary with title, video_id, duration, platform
+        """
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                return {
+                    'title': info.get('title', 'Unknown'),
+                    'video_id': info.get('id', 'unknown'),
+                    'duration': info.get('duration', 0.0),
+                    'platform': info.get('extractor', 'unknown').lower()
+                }
+        except Exception as e:
+            raise Exception(f"Failed to get video info: {str(e)}")
+
+    def _get_language_name(self, lang_code: str) -> str:
+        """
+        Get human-readable language name from language code.
+
+        Args:
+            lang_code: ISO 639-1 language code
+
+        Returns:
+            Language name in English
+        """
+        # Common language codes
+        language_names = {
+            'en': 'English',
+            'es': 'Spanish',
+            'fr': 'French',
+            'de': 'German',
+            'it': 'Italian',
+            'pt': 'Portuguese',
+            'ru': 'Russian',
+            'ja': 'Japanese',
+            'ko': 'Korean',
+            'zh': 'Chinese',
+            'ar': 'Arabic',
+            'hi': 'Hindi',
+            'nl': 'Dutch',
+            'pl': 'Polish',
+            'tr': 'Turkish',
+            'vi': 'Vietnamese',
+            'th': 'Thai',
+            'sv': 'Swedish',
+            'da': 'Danish',
+            'no': 'Norwegian',
+            'fi': 'Finnish',
+        }
+
+        return language_names.get(lang_code, lang_code.upper())
+
     @staticmethod
     def sanitize_filename(title: str, max_length: int = 200) -> str:
         """

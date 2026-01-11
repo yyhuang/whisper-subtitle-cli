@@ -5,6 +5,7 @@ Extract subtitles from video files or YouTube URLs using AI transcription (OpenA
 ## Features
 
 - **YouTube URL Support**: Process videos directly from YouTube and 1000+ other platforms
+- **Subtitle Download**: Automatically download existing YouTube subtitles (much faster than transcription)
 - **AI-Powered Transcription**: Uses Faster Whisper for accurate speech-to-text
 - **Dual Output**: Creates both SRT (with timestamps) and TXT (plain text) files
 - **Multiple Languages**: Auto-detects language or accepts manual specification
@@ -92,6 +93,36 @@ python main.py "https://vimeo.com/123456"
 # With options
 python main.py "https://youtube.com/watch?v=VIDEO_ID" --model small --language en --output ./subtitles
 ```
+
+### Subtitle Download (YouTube)
+
+When you provide a YouTube URL, the tool automatically checks for existing subtitles:
+
+```bash
+python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# The tool will show available subtitles:
+Checking for available subtitles...
+
+Available subtitles:
+  1. English (en)
+  2. Spanish (es)
+  3. German (de)
+  0. Transcribe video instead
+
+Which subtitle would you like to download? [0]: 1
+
+Downloading English subtitle...
+✓ Subtitle downloaded: Video_Title.srt
+✅ Done!
+```
+
+**Benefits**:
+- ⚡ **Much faster**: ~1 second vs 30-120 seconds for transcription
+- ✅ **More accurate**: Human-made subtitles are often better than AI
+- 🎯 **Smart filtering**: Only shows manual subtitles (auto-generated are hidden)
+- 🔄 **Automatic fallback**: If no subtitles exist, automatically transcribes
+- 🎛️ **User choice**: Select option 0 to transcribe even when subtitles available
 
 ### Model Options
 

@@ -76,9 +76,63 @@ def main(video_input, model, language, output, keep_audio):
         # Step 0: Handle URL vs file path
         if is_url(video_input):
             click.echo(f"Detected URL: {video_input}")
+
+            # Check for available subtitles first
+            click.echo("\nChecking for available subtitles...")
+            downloader = VideoDownloader(download_dir="/tmp")
+
+            subtitles = downloader.get_available_subtitles(video_input)
+
+            if subtitles:
+                # List available subtitles
+                click.echo("\nAvailable subtitles:")
+                subtitle_list = list(subtitles.items())
+                for idx, (lang_code, info) in enumerate(subtitle_list, 1):
+                    click.echo(f"  {idx}. {info['name']} ({lang_code})")
+                click.echo(f"  0. Transcribe video instead")
+
+                # User selects subtitle
+                choice = click.prompt(
+                    "\nWhich subtitle would you like to download?",
+                    type=click.IntRange(0, len(subtitle_list)),
+                    default=0
+                )
+
+                if choice > 0:
+                    # Download selected subtitle
+                    selected_lang = subtitle_list[choice - 1][0]
+                    selected_name = subtitle_list[choice - 1][1]['name']
+
+                    click.echo(f"\nDownloading {selected_name} subtitle...")
+
+                    # Get video title for output naming
+                    video_info = downloader.get_video_info(video_input)
+                    base_name = VideoDownloader.sanitize_filename(video_info['title'])
+
+                    # Determine output directory
+                    if output:
+                        output_dir = Path(output)
+                        output_dir.mkdir(parents=True, exist_ok=True)
+                    else:
+                        output_dir = Path.cwd()
+
+                    srt_path = output_dir / f"{base_name}.srt"
+
+                    # Download subtitle
+                    downloader.download_subtitle(video_input, selected_lang, str(srt_path))
+
+                    click.echo(f"✓ Subtitle downloaded: {srt_path}")
+                    click.echo("\n✅ Done! Subtitle download complete.")
+                    return  # Exit early, skip transcription
+
+            # No subtitles or user chose to transcribe
+            if not subtitles:
+                click.echo("No manual subtitles available. Transcribing video...")
+            else:
+                click.echo("\nProceeding with video transcription...")
+
             click.echo("\n[0/4] Downloading video...")
 
-            downloader = VideoDownloader(download_dir="/tmp")
             video_info = downloader.download(video_input, quiet=False)
 
             video_path = Path(video_info['file_path'])
