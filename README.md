@@ -2,21 +2,18 @@
 
 Extract subtitles from video files or YouTube URLs using AI transcription (OpenAI Whisper). Generates both SRT files for video playback and plain text files for easy reading.
 
+> **Note**: This project was built with AI assistance.
+
 ## Features
 
-- **YouTube URL Support**: Process videos directly from YouTube and 1000+ other platforms
+- **YouTube & URL Support**: Process videos from YouTube, Vimeo, Twitch, and [1000+ platforms](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 - **Subtitle Download**: Automatically download existing YouTube subtitles (much faster than transcription)
 - **AI-Powered Transcription**: Uses Faster Whisper for accurate speech-to-text
 - **Dual Output**: Creates both SRT (with timestamps) and TXT (plain text) files
 - **Multiple Languages**: Auto-detects language or accepts manual specification
 - **Flexible Models**: Choose from 5 model sizes balancing speed vs accuracy
-- **CLI Interface**: Simple command-line tool with helpful options
 
 ## Installation
-
-**New to Python or Poetry?** Check out the detailed [Installation Guide](INSTALL.md) for step-by-step instructions.
-
-### Quick Install (for experienced users)
 
 **Prerequisites:**
 - Python 3.11 or 3.12
@@ -32,7 +29,7 @@ brew install ffmpeg  # macOS
 poetry install --no-root
 ```
 
-See [INSTALL.md](INSTALL.md) for detailed installation instructions including how to install Python, Poetry, and troubleshooting.
+**New to Python or Poetry?** See [INSTALL.md](INSTALL.md) for detailed step-by-step instructions and troubleshooting.
 
 ## Usage
 
@@ -59,33 +56,24 @@ This creates two files:
 ### Advanced Options
 
 ```bash
-# Use a more accurate model (takes longer)
-python main.py video.mp4 --model medium
+# Use a different model size
+python main.py video.mp4 --model small
 
 # Specify the language (faster than auto-detect)
-python main.py "https://youtube.com/watch?v=VIDEO_ID" --language en
+python main.py video.mp4 --language en
 
 # Save output to a specific directory
 python main.py video.mp4 --output ./subtitles
 
 # Keep the extracted audio file
 python main.py video.mp4 --keep-audio
-```
 
-### YouTube URL Examples
-
-```bash
-# Standard YouTube URL
-python main.py "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-
-# Short YouTube URL
-python main.py "https://youtu.be/dQw4w9WgXcQ"
+# YouTube URLs work the same way
+python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+python main.py "https://youtu.be/VIDEO_ID"  # Short format
 
 # Other platforms (Vimeo, Twitch, etc.)
 python main.py "https://vimeo.com/123456"
-
-# With options
-python main.py "https://youtube.com/watch?v=VIDEO_ID" --model small --language en --output ./subtitles
 ```
 
 ### Subtitle Download (YouTube)
@@ -141,31 +129,6 @@ Common language codes (or use auto-detect by omitting):
 
 [Full list of supported languages](https://github.com/openai/whisper#available-models-and-languages)
 
-## Examples
-
-```bash
-# Process an English video with the medium model (default)
-python main.py lecture.mp4
-
-# Process a YouTube video
-python main.py "https://www.youtube.com/watch?v=abc123"
-
-# Process a Chinese video with high accuracy
-python main.py chinese_video.mp4 --model medium --language zh
-
-# Process a YouTube video in Spanish with high accuracy
-python main.py "https://youtu.be/xyz789" --model medium --language es
-
-# Process multiple videos (one at a time)
-python main.py video1.mp4
-python main.py "https://youtube.com/watch?v=video2"
-
-# Save all outputs to a subtitles folder
-mkdir subtitles
-python main.py video.mp4 --output ./subtitles
-python main.py "https://youtube.com/watch?v=abc" --output ./subtitles
-```
-
 ## Output Format
 
 ### SRT Format (video.srt)
@@ -186,25 +149,10 @@ Hello, world!
 This is a test.
 ```
 
-## Supported Video Sources
+## Supported Formats
 
-### Local Files
-Any format supported by ffmpeg:
-- MP4
-- MKV
-- AVI
-- MOV
-- WebM
-- FLV
-- and many more
-
-### URLs (via yt-dlp)
-- YouTube (youtube.com, youtu.be)
-- Vimeo
-- Twitch
-- Dailymotion
-- And 1000+ other video platforms
-- See [yt-dlp supported sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
+- **Local Video Files**: Any format supported by ffmpeg (MP4, MKV, AVI, MOV, WebM, FLV, etc.)
+- **URLs**: YouTube, Vimeo, Twitch, and [1000+ platforms via yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 
 ## Development
 
@@ -248,10 +196,10 @@ Install ffmpeg using your package manager (see Requirements section).
 Make sure you're running the script from the project root directory.
 
 ### Slow transcription
-Use a smaller model (`--model tiny` or `--model base`) or specify the language to avoid auto-detection.
+Use a smaller model (`--model tiny` or `--model base`) or specify the language (`--language en`) to skip auto-detection.
 
 ### Out of memory
-Use a smaller model. The `medium` (default) model uses ~2GB RAM, while `large` needs ~10GB. Use `--model base` or `--model tiny` for lower memory usage.
+Use a smaller model. Try `--model base` or `--model tiny` for lower memory usage (see Model Options table above for sizes).
 
 ## License
 
