@@ -164,7 +164,7 @@ def main(video_input, model, language, output, keep_audio):
                     click.echo(f"✓ Timestamped text created: {timestamped_txt_path}")
 
                     # Ask if user wants to split the timestamped file
-                    if click.confirm('\nWould you like to split the file into chunks for translation?', default=False):
+                    if click.confirm(f'\nWould you like to split the file into chunks for translation? ({len(segments)} segments total)', default=False):
                         segments_per_chunk = click.prompt(
                             'How many segments per chunk?',
                             type=click.IntRange(min=1),
@@ -176,6 +176,8 @@ def main(video_input, model, language, output, keep_audio):
                         click.echo(f"\n✓ Created {len(chunk_files)} chunk files:")
                         for chunk_file in chunk_files:
                             click.echo(f"  • {Path(chunk_file).name}")
+                        click.echo(f"\nChunk files saved to:")
+                        click.echo(f"  {Path(chunk_files[0]).parent}")
 
                     click.echo("\n✅ Done! Subtitle download complete.")
                     click.echo(f"\nOutput files:")
@@ -260,7 +262,7 @@ def main(video_input, model, language, output, keep_audio):
         click.echo(f"✓ Timestamped text created: {timestamped_txt_path}")
 
         # Ask if user wants to split the timestamped file
-        if click.confirm('\nWould you like to split the file into chunks for translation?', default=False):
+        if click.confirm(f'\nWould you like to split the file into chunks for translation? ({len(segments)} segments total)', default=False):
             segments_per_chunk = click.prompt(
                 'How many segments per chunk?',
                 type=click.IntRange(min=1),
@@ -272,6 +274,8 @@ def main(video_input, model, language, output, keep_audio):
             click.echo(f"\n✓ Created {len(chunk_files)} chunk files:")
             for chunk_file in chunk_files:
                 click.echo(f"  • {Path(chunk_file).name}")
+            click.echo(f"\nChunk files saved to:")
+            click.echo(f"  {Path(chunk_files[0]).parent}")
 
         # Clean up audio file if not keeping it
         if not keep_audio and audio_path.exists():
