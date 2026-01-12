@@ -10,6 +10,7 @@ import click
 import os
 import sys
 from pathlib import Path
+from datetime import datetime
 
 from src.audio_extractor import AudioExtractor
 from src.transcriber import Transcriber
@@ -31,6 +32,29 @@ class VideoInput(click.ParamType):
         if not path.exists():
             self.fail(f"File not found: {value}", param, ctx)
         return str(path.resolve())
+
+
+def get_date_prefix(upload_date: str = None, file_path: Path = None) -> str:
+    """
+    Get date prefix for filename in YYYYMMDD format.
+
+    Args:
+        upload_date: Video upload date in YYYYMMDD format (from yt-dlp)
+        file_path: Local file path (used to get modification date if upload_date is None)
+
+    Returns:
+        Date prefix string in YYYYMMDD format
+    """
+    if upload_date:
+        # Use upload date from video metadata (already in YYYYMMDD format)
+        return upload_date
+    elif file_path and file_path.exists():
+        # Fall back to file modification date for local files
+        mtime = file_path.stat().st_mtime
+        return datetime.fromtimestamp(mtime).strftime('%Y%m%d')
+    else:
+        # Fall back to current date
+        return datetime.now().strftime('%Y%m%d')
 
 
 @click.command()
@@ -109,6 +133,9 @@ def main(video_input, model, language, output, keep_audio):
                     video_info = downloader.get_video_info(video_input)
                     base_name = VideoDownloader.sanitize_filename(video_info['title'])
 
+                    # Get date prefix from video upload date
+                    date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
+
                     # Determine output directory
                     if output:
                         output_dir = Path(output)
@@ -116,8 +143,8 @@ def main(video_input, model, language, output, keep_audio):
                     else:
                         output_dir = Path.cwd()
 
-                    srt_path = output_dir / f"{base_name}.srt"
-                    timestamped_txt_path = output_dir / f"{base_name}.timestamped.txt"
+                    srt_path = output_dir / f"{date_prefix}_{base_name}.srt"
+                    timestamped_txt_path = output_dir / f"{date_prefix}_{base_name}.timestamped.txt"
 
                     # Download subtitle
                     downloader.download_subtitle(video_input, selected_lang, str(srt_path))
@@ -149,6 +176,9 @@ def main(video_input, model, language, output, keep_audio):
             video_title = video_info['title']
             base_name = VideoDownloader.sanitize_filename(video_title)
 
+            # Get date prefix from video upload date
+            date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
+
             click.echo(f"✓ Downloaded: {video_title}")
             click.echo(f"  Duration: {video_info['duration']:.1f}s")
             click.echo(f"✓ Saved to /tmp (OS will clean up automatically)")
@@ -156,6 +186,10 @@ def main(video_input, model, language, output, keep_audio):
             # Existing file path behavior
             video_path = Path(video_input).resolve()
             base_name = video_path.stem
+
+            # Get date prefix from file modification date
+            date_prefix = get_date_prefix(file_path=video_path)
+
             click.echo(f"Processing: {video_path.name}")
 
         # Determine output directory
@@ -165,11 +199,11 @@ def main(video_input, model, language, output, keep_audio):
         else:
             output_dir = video_path.parent
 
-        # Generate output file paths
-        audio_path = output_dir / f"{base_name}.wav"
-        srt_path = output_dir / f"{base_name}.srt"
-        txt_path = output_dir / f"{base_name}.txt"
-        timestamped_txt_path = output_dir / f"{base_name}.timestamped.txt"
+        # Generate output file paths with date prefix
+        audio_path = output_dir / f"{date_prefix}_{base_name}.wav"
+        srt_path = output_dir / f"{date_prefix}_{base_name}.srt"
+        txt_path = output_dir / f"{date_prefix}_{base_name}.txt"
+        timestamped_txt_path = output_dir / f"{date_prefix}_{base_name}.timestamped.txt"
 
         # Step 1: Extract audio
         step_num = "[1/4]" if is_url(video_input) else "[1/3]"

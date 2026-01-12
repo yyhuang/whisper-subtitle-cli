@@ -19,9 +19,22 @@ CLI tool to generate subtitles from video/audio files using OpenAI Whisper AI mo
 - **yt-dlp** for downloading videos from URLs
 
 ## Output Files
-For input `video.mp4`:
-- `video.srt` - SRT subtitle file with timestamps
-- `video.txt` - Plain text transcript without timestamps
+All subtitle files include a date prefix (YYYYMMDD format):
+
+For YouTube URLs:
+- `YYYYMMDD_video_title.srt` - SRT subtitle file with timestamps
+- `YYYYMMDD_video_title.txt` - Plain text transcript without timestamps
+- `YYYYMMDD_video_title.timestamped.txt` - Timestamped text for translation
+
+For local files (e.g., `video.mp4`):
+- `YYYYMMDD_video.srt` - SRT subtitle file with timestamps
+- `YYYYMMDD_video.txt` - Plain text transcript without timestamps
+- `YYYYMMDD_video.timestamped.txt` - Timestamped text for translation
+
+**Date Logic**:
+- YouTube URLs: Uses video's original upload date
+- Local files: Uses file's modification date
+- Fallback: Uses current date if neither is available
 
 ## Configuration Options
 - Whisper model size: tiny, base, small, medium, large (default: medium)
@@ -80,9 +93,10 @@ python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 # Short YouTube URL format
 python main.py "https://youtu.be/VIDEO_ID"
 
-# This creates:
-# - video.srt (subtitle file with timestamps)
-# - video.txt (plain text for reading)
+# This creates files with date prefix:
+# - YYYYMMDD_video.srt (subtitle file with timestamps)
+# - YYYYMMDD_video.txt (plain text for reading)
+# - YYYYMMDD_video.timestamped.txt (for translation)
 ```
 
 ### Advanced Options

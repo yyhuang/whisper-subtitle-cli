@@ -53,6 +53,7 @@ class VideoDownloader:
                 - video_id: Platform video ID
                 - duration: Duration in seconds
                 - platform: Platform name (youtube, vimeo, etc.)
+                - upload_date: Upload date in YYYYMMDD format (or None if unavailable)
 
         Raises:
             Exception: If download fails
@@ -79,7 +80,8 @@ class VideoDownloader:
                     'title': info.get('title', 'Unknown'),
                     'video_id': info.get('id', 'unknown'),
                     'duration': info.get('duration', 0.0),
-                    'platform': info.get('extractor', 'unknown').lower()
+                    'platform': info.get('extractor', 'unknown').lower(),
+                    'upload_date': info.get('upload_date', None)
                 }
 
         except Exception as e:
@@ -196,7 +198,7 @@ class VideoDownloader:
             url: Video URL
 
         Returns:
-            Dictionary with title, video_id, duration, platform
+            Dictionary with title, video_id, duration, platform, upload_date
         """
         ydl_opts = {
             'quiet': True,
@@ -210,7 +212,8 @@ class VideoDownloader:
                     'title': info.get('title', 'Unknown'),
                     'video_id': info.get('id', 'unknown'),
                     'duration': info.get('duration', 0.0),
-                    'platform': info.get('extractor', 'unknown').lower()
+                    'platform': info.get('extractor', 'unknown').lower(),
+                    'upload_date': info.get('upload_date', None)
                 }
         except Exception as e:
             raise Exception(f"Failed to get video info: {str(e)}")
