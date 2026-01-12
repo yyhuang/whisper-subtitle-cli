@@ -191,7 +191,8 @@ def main(video_input, model, language, output, keep_audio):
         else:
             # Existing file path behavior
             video_path = Path(video_input).resolve()
-            base_name = video_path.stem
+            # Sanitize local filename to replace spaces with underscores
+            base_name = VideoDownloader.sanitize_filename(video_path.stem)
 
             # Get date prefix from file modification date
             date_prefix = get_date_prefix(file_path=video_path)

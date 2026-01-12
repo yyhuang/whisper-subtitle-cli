@@ -19,17 +19,23 @@ CLI tool to generate subtitles from video/audio files using OpenAI Whisper AI mo
 - **yt-dlp** for downloading videos from URLs
 
 ## Output Files
-All subtitle files include a date prefix (YYYYMMDD format):
+All subtitle files include a date prefix (YYYYMMDD format) and use underscores instead of spaces for easier command line usage:
 
 For YouTube URLs:
 - `YYYYMMDD_video_title.srt` - SRT subtitle file with timestamps
 - `YYYYMMDD_video_title.txt` - Plain text transcript without timestamps
 - `YYYYMMDD_video_title.timestamped.txt` - Timestamped text for translation
 
-For local files (e.g., `video.mp4`):
-- `YYYYMMDD_video.srt` - SRT subtitle file with timestamps
-- `YYYYMMDD_video.txt` - Plain text transcript without timestamps
-- `YYYYMMDD_video.timestamped.txt` - Timestamped text for translation
+For local files (e.g., `my video.mp4`):
+- `YYYYMMDD_my_video.srt` - SRT subtitle file with timestamps
+- `YYYYMMDD_my_video.txt` - Plain text transcript without timestamps
+- `YYYYMMDD_my_video.timestamped.txt` - Timestamped text for translation
+
+**Filename Rules**:
+- Spaces are replaced with underscores (`_`)
+- Invalid characters (`/ \ : * ? " < > |`) are replaced with underscores
+- Leading and trailing underscores are removed
+- Makes files easier to work with in command line
 
 **Date Logic**:
 - YouTube URLs: Uses video's original upload date

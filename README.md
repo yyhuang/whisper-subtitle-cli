@@ -47,11 +47,14 @@ Extract subtitles from a YouTube URL:
 python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
-This creates two files:
-- `video.srt` or `Video_Title.srt` - Subtitle file with timestamps (for video players)
-- `video.txt` or `Video_Title.txt` - Plain text transcript (for reading)
+This creates three files with date prefix (YYYYMMDD format):
+- `YYYYMMDD_video.srt` or `YYYYMMDD_Video_Title.srt` - Subtitle file with timestamps (for video players)
+- `YYYYMMDD_video.txt` or `YYYYMMDD_Video_Title.txt` - Plain text transcript (for reading)
+- `YYYYMMDD_video.timestamped.txt` or `YYYYMMDD_Video_Title.timestamped.txt` - Timestamped text (for translation)
 
-**Note**: When processing URLs, videos are downloaded to your system's temporary directory and cleaned up automatically by your OS.
+**Note**:
+- Filenames use underscores instead of spaces for easier command line usage (e.g., `My Video.mp4` → `YYYYMMDD_My_Video.srt`)
+- When processing URLs, videos are downloaded to your system's temporary directory and cleaned up automatically by your OS
 
 ### Advanced Options
 
@@ -95,7 +98,7 @@ Available subtitles:
 Which subtitle would you like to download? [0]: 1
 
 Downloading English subtitle...
-✓ Subtitle downloaded: Video_Title.srt
+✓ Subtitle downloaded: YYYYMMDD_Video_Title.srt
 ✅ Done!
 ```
 

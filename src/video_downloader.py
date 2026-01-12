@@ -263,8 +263,8 @@ class VideoDownloader:
         """
         Sanitize video title for use as filename.
 
-        Removes or replaces characters that are invalid in filenames
-        and truncates to maximum length.
+        Removes or replaces characters that are invalid in filenames,
+        replaces spaces with underscores, and truncates to maximum length.
 
         Args:
             title: Video title to sanitize
@@ -278,12 +278,15 @@ class VideoDownloader:
         invalid_chars = r'[/\\:*?"<>|]'
         sanitized = re.sub(invalid_chars, '_', title)
 
-        # Remove any leading/trailing whitespace and underscores
-        sanitized = sanitized.strip().strip('_')
+        # Replace spaces with underscores for easier command line usage
+        sanitized = sanitized.replace(' ', '_')
+
+        # Remove any leading/trailing underscores
+        sanitized = sanitized.strip('_')
 
         # Truncate to max length
         if len(sanitized) > max_length:
-            sanitized = sanitized[:max_length].strip()
+            sanitized = sanitized[:max_length].strip('_')
 
         # If somehow we end up with an empty string, use a default
         if not sanitized:
