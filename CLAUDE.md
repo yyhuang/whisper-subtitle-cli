@@ -54,13 +54,15 @@ Configure the Ollama model and API URL in `config.json` at the project root:
 {
   "ollama": {
     "model": "qwen2.5:7b",
-    "base_url": "http://localhost:11434"
+    "base_url": "http://localhost:11434",
+    "batch_size": 50
   }
 }
 ```
 
 - **model**: The Ollama model to use for translation (default: `qwen2.5:7b`)
 - **base_url**: Ollama API URL (default: `http://localhost:11434`)
+- **batch_size**: Number of segments to translate per API call (default: `50`)
 
 ### CLI Options
 - Whisper model size: tiny, base, small, medium, large (default: medium)
@@ -106,7 +108,7 @@ All core features implemented and tested:
 - ✅ Subtitle download from YouTube (human-made subtitles only)
 - ✅ AI transcription using Faster Whisper
 - ✅ SRT subtitle file generation
-- ✅ Subtitle translation via local Ollama API
+- ✅ Subtitle translation via local Ollama API (batch processing with recursive retry)
 - ✅ CLI interface with options
 - ✅ Temp directory output for URL downloads
 
@@ -208,13 +210,21 @@ Translating 150 segments...
 - Ollama must be running locally (`ollama serve`)
 - Model must be pulled (`ollama pull qwen2.5:7b`)
 
+**How Translation Works**:
+- Segments are translated in **batches** (default: 50 segments per batch) for better context
+- Batch translation provides better quality than one-by-one translation
+- If a batch fails, it's automatically **split in half** and retried
+- This continues recursively until the problematic segment is isolated
+- Timestamps are preserved by our code - the LLM never sees them
+
 **Configuration**:
-Edit `config.json` to change the model or API URL:
+Edit `config.json` to change the model, API URL, or batch size:
 ```json
 {
   "ollama": {
     "model": "llama3:8b",
-    "base_url": "http://localhost:11434"
+    "base_url": "http://localhost:11434",
+    "batch_size": 50
   }
 }
 ```
