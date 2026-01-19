@@ -134,6 +134,10 @@ python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 
 # Short YouTube URL format
 python main.py "https://youtu.be/VIDEO_ID"
+
+# Translate an existing SRT file (skip download/transcription)
+python main.py existing_subtitle.srt
+# Goes directly to translation prompt
 ```
 
 ### Advanced Options

@@ -111,7 +111,9 @@ Downloading English subtitle...
 
 ### Subtitle Translation (Ollama)
 
-After creating or downloading subtitles, you can translate them to another language using a local Ollama model:
+After creating or downloading subtitles, you can translate them to another language using a local Ollama model.
+
+**Translate during transcription:**
 
 ```bash
 python main.py video.mp4
@@ -131,6 +133,36 @@ Translating 150 segments...
 
 ✅ Done!
 ```
+
+**Translate an existing SRT file:**
+
+If you already have an SRT file (from a previous run or another source), you can translate it directly without re-downloading or re-transcribing:
+
+```bash
+python main.py existing_subtitle.srt
+
+# Output:
+SRT file detected: existing_subtitle.srt
+Skipping download/transcription, going directly to translation.
+
+✓ Parsed 150 segments from SRT file
+
+Would you like to translate the subtitles? [y/N]: y
+Source language [English]: English
+Target language: Japanese
+
+Using Ollama model: qwen2.5:7b
+
+Translating 150 segments...
+✓ Translated SRT created: existing_subtitle.Japanese.srt
+
+✅ Done!
+```
+
+This is useful when:
+- Translation failed midway and you want to retry
+- You want to translate to a different language
+- You have SRT files from another source
 
 **Requirements:**
 - Ollama must be installed and running (`ollama serve`)

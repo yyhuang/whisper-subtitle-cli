@@ -21,7 +21,7 @@ from src.translator import OllamaTranslator, load_config
 
 
 class VideoInput(click.ParamType):
-    """Custom Click parameter type that accepts both file paths and URLs."""
+    """Custom Click parameter type that accepts file paths, URLs, or SRT files."""
     name = "video_input"
 
     def convert(self, value, param, ctx):
@@ -34,6 +34,11 @@ class VideoInput(click.ParamType):
         if not path.exists():
             self.fail(f"File not found: {value}", param, ctx)
         return str(path.resolve())
+
+
+def is_srt_file(path: str) -> bool:
+    """Check if the input is an SRT subtitle file."""
+    return path.lower().endswith('.srt')
 
 
 def get_date_prefix(upload_date: str = None, file_path: Path = None) -> str:
@@ -120,6 +125,59 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
         click.echo(f"\n❌ Translation error: {e}", err=True)
 
 
+def handle_srt_translation(srt_path: str, output: str = None):
+    """
+    Handle translation of an existing SRT file.
+
+    Args:
+        srt_path: Path to the SRT file
+        output: Optional output directory
+    """
+    srt_file = Path(srt_path)
+    click.echo(f"SRT file detected: {srt_file.name}")
+    click.echo("Skipping download/transcription, going directly to translation.\n")
+
+    # Parse SRT file
+    writer = SubtitleWriter()
+    try:
+        segments = writer.parse_srt(srt_path)
+    except Exception as e:
+        click.echo(f"❌ Failed to parse SRT file: {e}", err=True)
+        sys.exit(1)
+
+    click.echo(f"✓ Parsed {len(segments)} segments from SRT file")
+
+    # Determine output directory
+    if output:
+        output_dir = Path(output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        output_dir = srt_file.parent
+
+    # Extract base name and date prefix from filename
+    # Expected format: YYYYMMDD_name.srt or YYYYMMDD_name.Language.srt
+    filename = srt_file.stem  # Remove .srt extension
+
+    # Check if filename starts with date prefix
+    if len(filename) >= 8 and filename[:8].isdigit():
+        date_prefix = filename[:8]
+        rest = filename[9:] if len(filename) > 9 else filename[8:]  # Skip underscore
+    else:
+        date_prefix = get_date_prefix(file_path=srt_file)
+        rest = filename
+
+    # Remove language suffix if present (e.g., "video.Chinese" -> "video")
+    if '.' in rest:
+        base_name = rest.rsplit('.', 1)[0]
+    else:
+        base_name = rest
+
+    # Go directly to translation
+    translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
+
+    click.echo("\n✅ Done!")
+
+
 @click.command()
 @click.argument('video_input', type=VideoInput())
 @click.option(
@@ -148,7 +206,7 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
 )
 def main(video_input, model, language, output, keep_audio):
     """
-    Extract subtitles from VIDEO_INPUT (file path or URL) using AI transcription.
+    Extract subtitles from VIDEO_INPUT (file path, URL, or SRT file) using AI transcription.
 
     Generates .srt file for video players with timestamps.
 
@@ -156,8 +214,14 @@ def main(video_input, model, language, output, keep_audio):
         python main.py video.mp4
         python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
         python main.py video.mp4 --model medium --language en
+        python main.py existing.srt  # Translate existing SRT file
     """
     try:
+        # Handle SRT file input - skip to translation
+        if is_srt_file(video_input):
+            handle_srt_translation(video_input, output)
+            return
+
         # Step 0: Handle URL vs file path
         is_url_input = False
         temp_dir_path = None
