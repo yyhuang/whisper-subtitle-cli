@@ -1,6 +1,5 @@
 import re
 import os
-import sys
 import tempfile
 from pathlib import Path
 from typing import Optional, Dict
@@ -38,12 +37,7 @@ class VideoDownloader:
             download_dir: Directory to save downloaded videos (default: system temp directory)
         """
         if download_dir is None:
-            # Use /tmp on Unix systems (cleaner than tempfile.gettempdir())
-            # Use system temp directory on Windows
-            if sys.platform in ('darwin', 'linux'):
-                download_dir = '/tmp'
-            else:
-                download_dir = tempfile.gettempdir()
+            download_dir = tempfile.gettempdir()
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
 
