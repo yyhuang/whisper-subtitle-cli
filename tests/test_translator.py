@@ -24,7 +24,7 @@ class TestLoadConfig:
                 config = load_config()
 
             assert 'ollama' in config
-            assert config['ollama']['model'] == 'qwen2.5:7b'
+            assert config['ollama']['model'] == 'gemma3:4b'
             assert config['ollama']['base_url'] == 'http://localhost:11434'
             assert config['ollama']['batch_size'] == 50
 

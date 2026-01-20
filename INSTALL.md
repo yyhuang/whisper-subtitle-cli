@@ -276,14 +276,14 @@ After installation, start the Ollama service and download a translation model:
 ollama serve
 
 # In a new terminal, download the default translation model
-ollama pull qwen2.5:7b
+ollama pull gemma3:4b
 ```
 
 **Model options for translation:**
 | Model | Size | Quality | Speed |
 |-------|------|---------|-------|
 | `qwen2.5:3b` | ~2GB | Good | Fast |
-| `qwen2.5:7b` | ~4.5GB | Better (default) | Medium |
+| `gemma3:4b` | ~4.5GB | Better (default) | Medium |
 | `llama3:8b` | ~4.7GB | Good | Medium |
 | `qwen2.5:14b` | ~9GB | Best | Slow |
 
@@ -296,7 +296,7 @@ Choose based on your hardware. Larger models need more RAM/VRAM.
 ollama list
 ```
 
-You should see the model you downloaded (e.g., `qwen2.5:7b`).
+You should see the model you downloaded (e.g., `gemma3:4b`).
 
 ---
 

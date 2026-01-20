@@ -17,7 +17,7 @@ def load_config() -> dict:
     config_path = Path(__file__).parent.parent / 'config.json'
     default_config = {
         "ollama": {
-            "model": "qwen2.5:7b",
+            "model": "gemma3:4b",
             "base_url": "http://localhost:11434",
             "batch_size": 50,
             "keep_alive": "10m"
@@ -43,7 +43,7 @@ class OllamaTranslator:
         Initialize the translator with Ollama settings.
 
         Args:
-            model: Ollama model name (e.g., 'qwen2.5:7b'). Loads from config if not provided.
+            model: Ollama model name (e.g., 'gemma3:4b'). Loads from config if not provided.
             base_url: Ollama API base URL. Loads from config if not provided.
             batch_size: Number of segments per batch. Loads from config if not provided.
             keep_alive: How long to keep model loaded (e.g., '10m', '1h', '-1'). Loads from config if not provided.

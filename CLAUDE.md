@@ -52,7 +52,7 @@ Configure the Ollama model and API URL in `config.json` at the project root:
 ```json
 {
   "ollama": {
-    "model": "qwen2.5:7b",
+    "model": "gemma3:4b",
     "base_url": "http://localhost:11434",
     "batch_size": 50,
     "keep_alive": "10m"
@@ -60,7 +60,7 @@ Configure the Ollama model and API URL in `config.json` at the project root:
 }
 ```
 
-- **model**: The Ollama model to use for translation (default: `qwen2.5:7b`)
+- **model**: The Ollama model to use for translation (default: `gemma3:4b`)
 - **base_url**: Ollama API URL, can point to remote Ollama server (default: `http://localhost:11434`)
 - **batch_size**: Number of segments to translate per API call (default: `50`)
 - **keep_alive**: How long to keep the model loaded in memory after a request (default: `10m`)
@@ -208,7 +208,7 @@ Would you like to translate the subtitles? [y/N]: y
 Source language [English]: English
 Target language: Chinese
 
-Using Ollama model: qwen2.5:7b
+Using Ollama model: gemma3:4b
 
 Translating 150 segments...
   Translating segment 150/150...
@@ -219,7 +219,7 @@ Translating 150 segments...
 
 **Requirements**:
 - Ollama must be running locally (`ollama serve`)
-- Model must be pulled (`ollama pull qwen2.5:7b`)
+- Model must be pulled (`ollama pull gemma3:4b`)
 
 **How Translation Works**:
 - Segments are translated in **batches** (default: 50 segments per batch) for better context
