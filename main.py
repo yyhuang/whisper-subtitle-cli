@@ -10,6 +10,7 @@ import click
 import os
 import sys
 import tempfile
+import time
 from pathlib import Path
 from datetime import datetime
 
@@ -102,9 +103,12 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
         output_dir: Directory for output files
         date_prefix: Date prefix for filenames
         base_name: Base name for output files
+
+    Returns:
+        Translation time in seconds, or None if translation was skipped
     """
     if not click.confirm('\nWould you like to translate the subtitles?', default=False):
-        return
+        return None
 
     source_lang = click.prompt('Source language', default='English')
     target_lang = click.prompt('Target language', default='Chinese')
@@ -133,12 +137,14 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
         click.echo('\r', nl=False)
 
     try:
+        translation_start = time.time()
         translated_segments = translator.translate_segments(
             segments,
             source_lang,
             target_lang,
             progress_callback=progress_callback
         )
+        translation_time = time.time() - translation_start
         click.echo()  # New line after progress
 
         # Write translated SRT
@@ -155,10 +161,14 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
             writer.write_srt(bilingual_segments, str(bilingual_srt_path))
             click.echo(f"✓ Bilingual SRT created: {bilingual_srt_path.name}")
 
+        return translation_time
+
     except ConnectionError as e:
         click.echo(f"\n❌ Connection error: {e}", err=True)
+        return None
     except RuntimeError as e:
         click.echo(f"\n❌ Translation error: {e}", err=True)
+        return None
 
 
 def handle_srt_translation(srt_path: str, output: str = None):
@@ -209,9 +219,14 @@ def handle_srt_translation(srt_path: str, output: str = None):
         base_name = rest
 
     # Go directly to translation
-    translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
+    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
 
     click.echo("\n✅ Done!")
+
+    # Display timing summary
+    if translation_time is not None:
+        click.echo(f"\n⏱ Time spent:")
+        click.echo(f"  Translation: {translation_time:.1f}s")
 
 
 @click.command()
@@ -322,11 +337,17 @@ def main(data_input, model, language, output, keep_audio):
                     click.echo(f"✓ Subtitle downloaded: {srt_path}")
 
                     # Offer translation
-                    translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
+                    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
 
                     click.echo("\n✅ Done! Subtitle download complete.")
                     click.echo(f"\nOutput files saved to:")
                     click.echo(f"  {output_dir}")
+
+                    # Display timing summary
+                    if translation_time is not None:
+                        click.echo(f"\n⏱ Time spent:")
+                        click.echo(f"  Translation: {translation_time:.1f}s")
+
                     return  # Exit early, skip transcription
 
             # No subtitles or user chose to transcribe
@@ -388,7 +409,9 @@ def main(data_input, model, language, output, keep_audio):
             click.echo("      Language: auto-detect")
 
         transcriber = Transcriber(model_size=model)
+        transcribe_start = time.time()
         segments = transcriber.transcribe(str(audio_path), language=language)
+        transcribe_time = time.time() - transcribe_start
         click.echo(f"✓ Transcription complete ({len(segments)} segments)")
 
         # Step 3: Write subtitle files
@@ -400,7 +423,7 @@ def main(data_input, model, language, output, keep_audio):
         click.echo(f"✓ SRT file created: {srt_path}")
 
         # Step 4: Offer translation (for URL inputs this becomes [4/4])
-        translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
+        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
 
         # Clean up audio file if not keeping it
         if not keep_audio and audio_path.exists():
@@ -412,6 +435,13 @@ def main(data_input, model, language, output, keep_audio):
         click.echo("\n✅ Done! Subtitle extraction complete.")
         click.echo(f"\nOutput files saved to:")
         click.echo(f"  {output_dir}")
+
+        # Display timing summary
+        click.echo(f"\n⏱ Time spent:")
+        click.echo(f"  Whisper transcription: {transcribe_time:.1f}s")
+        if translation_time is not None:
+            click.echo(f"  Translation: {translation_time:.1f}s")
+            click.echo(f"  Total: {transcribe_time + translation_time:.1f}s")
 
     except FileNotFoundError as e:
         click.echo(f"\n❌ Error: {e}", err=True)
