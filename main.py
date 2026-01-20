@@ -64,6 +64,27 @@ def get_date_prefix(upload_date: str = None, file_path: Path = None) -> str:
         return datetime.now().strftime('%Y%m%d')
 
 
+def create_bilingual_segments(original_segments, translated_segments):
+    """
+    Create bilingual segments with original and translated text.
+
+    Args:
+        original_segments: List of original subtitle segments
+        translated_segments: List of translated subtitle segments
+
+    Returns:
+        List of bilingual segments with both texts
+    """
+    bilingual = []
+    for orig, trans in zip(original_segments, translated_segments):
+        bilingual.append({
+            'start': orig['start'],
+            'end': orig['end'],
+            'text': f"{orig['text']}\n{trans['text']}"
+        })
+    return bilingual
+
+
 def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
     """
     Handle subtitle translation workflow.
@@ -118,6 +139,13 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
         writer.write_srt(translated_segments, str(translated_srt_path))
 
         click.echo(f"✓ Translated SRT created: {translated_srt_path.name}")
+
+        # Ask about bilingual output
+        if click.confirm('Would you like a bilingual subtitle (original + translation)?', default=False):
+            bilingual_segments = create_bilingual_segments(segments, translated_segments)
+            bilingual_srt_path = output_dir / f"{date_prefix}_{base_name}.bilingual.srt"
+            writer.write_srt(bilingual_segments, str(bilingual_srt_path))
+            click.echo(f"✓ Bilingual SRT created: {bilingual_srt_path.name}")
 
     except ConnectionError as e:
         click.echo(f"\n❌ Connection error: {e}", err=True)

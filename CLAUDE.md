@@ -26,6 +26,7 @@ All subtitle files include a date prefix (YYYYMMDD format) and use underscores i
 - `YYYYMMDD_video_id.srt` - SRT subtitle file with timestamps (for URL inputs)
 - `YYYYMMDD_filename.srt` - SRT subtitle file (for local files)
 - `YYYYMMDD_video_id.{Language}.srt` - Translated subtitle file (when translation is used)
+- `YYYYMMDD_video_id.bilingual.srt` - Bilingual subtitle with original + translation (optional)
 
 **Output Location**:
 - **YouTube/URL inputs**: Saved to system temp directory (platform-specific)
