@@ -141,6 +141,36 @@ class TestOllamaTranslator:
         assert 'professional English (en) to Chinese (zh) translator' in prompt
         assert 'Hello' in prompt
 
+    def test_preserve_linebreaks(self):
+        """Test that linebreaks are preserved with delimiter."""
+        translator = OllamaTranslator(model='test-model', base_url='http://localhost:11434', batch_size=50)
+
+        text = "Line 1\nLine 2\nLine 3"
+        preserved = translator._preserve_linebreaks(text)
+        assert preserved == "Line 1 || Line 2 || Line 3"
+
+        restored = translator._restore_linebreaks(preserved)
+        assert restored == text
+
+    def test_translate_text_multiline(self):
+        """Test that multi-line text is translated with linebreaks preserved."""
+        translator = OllamaTranslator(model='test-model', base_url='http://localhost:11434', batch_size=50)
+
+        mock_response = Mock()
+        # LLM returns translation with delimiter preserved
+        mock_response.json.return_value = {'response': '你好 || 世界'}
+        mock_response.raise_for_status = Mock()
+
+        with patch('src.translator.requests.post', return_value=mock_response):
+            result = translator.translate_text(
+                'Hello\nWorld',
+                'English',
+                'Chinese'
+            )
+
+        # Result should have linebreaks restored
+        assert result == '你好\n世界'
+
     def test_translate_text_success(self, translator):
         """Test successful text translation."""
         mock_response = Mock()

@@ -68,6 +68,10 @@ def create_bilingual_segments(original_segments, translated_segments):
     """
     Create bilingual segments with original and translated text.
 
+    Each segment has 2 lines:
+    - Line 1: Original text (multiple lines joined with " / ")
+    - Line 2: Translated text (multiple lines joined with " / ")
+
     Args:
         original_segments: List of original subtitle segments
         translated_segments: List of translated subtitle segments
@@ -77,10 +81,13 @@ def create_bilingual_segments(original_segments, translated_segments):
     """
     bilingual = []
     for orig, trans in zip(original_segments, translated_segments):
+        # Join multiple lines with " / " for compact display
+        orig_text = orig['text'].replace('\n', ' / ')
+        trans_text = trans['text'].replace('\n', ' / ')
         bilingual.append({
             'start': orig['start'],
             'end': orig['end'],
-            'text': f"{orig['text']}\n{trans['text']}"
+            'text': f"{orig_text}\n{trans_text}"
         })
     return bilingual
 

@@ -131,7 +131,18 @@ class OllamaTranslator:
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Translation failed: {e}")
 
-    def _build_translategemma_prompt(self, text: str, source_lang: str, target_lang: str) -> str:
+    # Delimiter used to preserve line breaks during translation
+    LINE_DELIMITER = " || "
+
+    def _preserve_linebreaks(self, text: str) -> str:
+        """Replace newlines with delimiter for translation."""
+        return text.replace('\n', self.LINE_DELIMITER)
+
+    def _restore_linebreaks(self, text: str) -> str:
+        """Restore newlines from delimiter after translation."""
+        return text.replace(self.LINE_DELIMITER, '\n')
+
+    def _build_translategemma_prompt(self, text: str, source_lang: str, target_lang: str, has_delimiter: bool = False) -> str:
         """
         Build a prompt for TranslateGemma model.
 
@@ -139,6 +150,7 @@ class OllamaTranslator:
             text: Text to translate
             source_lang: Source language name
             target_lang: Target language name
+            has_delimiter: Whether text contains line delimiters to preserve
 
         Returns:
             Formatted prompt for TranslateGemma
@@ -146,7 +158,9 @@ class OllamaTranslator:
         source_code = get_language_code(source_lang)
         target_code = get_language_code(target_lang)
 
-        return f"""You are a professional {source_lang} ({source_code}) to {target_lang} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_lang} text while adhering to {target_lang} grammar, vocabulary, and cultural sensitivities. Produce only the {target_lang} translation, without any additional explanations or commentary.
+        delimiter_instruction = ' Keep " || " delimiters in the same positions.' if has_delimiter else ''
+
+        return f"""You are a professional {source_lang} ({source_code}) to {target_lang} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_lang} text while adhering to {target_lang} grammar, vocabulary, and cultural sensitivities. Produce only the {target_lang} translation, without any additional explanations or commentary.{delimiter_instruction}
 
 {text}"""
 
@@ -166,11 +180,27 @@ class OllamaTranslator:
             ConnectionError: If Ollama API is not available
             RuntimeError: If translation fails
         """
+        has_linebreaks = '\n' in text
+
+        # Preserve linebreaks using delimiter
+        if has_linebreaks:
+            text = self._preserve_linebreaks(text)
+
         if self._is_translategemma():
-            prompt = self._build_translategemma_prompt(text, source_lang, target_lang)
+            prompt = self._build_translategemma_prompt(text, source_lang, target_lang, has_delimiter=has_linebreaks)
         else:
-            prompt = f"Translate the following from {source_lang} to {target_lang}. Only output the translation, nothing else:\n\n{text}"
-        return self._call_ollama(prompt, timeout=60)
+            if has_linebreaks:
+                prompt = f"Translate the following from {source_lang} to {target_lang}. Only output the translation. Keep \" || \" delimiters in the same positions:\n\n{text}"
+            else:
+                prompt = f"Translate the following from {source_lang} to {target_lang}. Only output the translation, nothing else:\n\n{text}"
+
+        result = self._call_ollama(prompt, timeout=60)
+
+        # Restore linebreaks
+        if has_linebreaks:
+            result = self._restore_linebreaks(result)
+
+        return result
 
     def _build_batch_prompt(
         self,
@@ -189,21 +219,26 @@ class OllamaTranslator:
         Returns:
             Formatted prompt string
         """
+        # Replace newlines with delimiter to keep each segment on one line
+        preserved_texts = [self._preserve_linebreaks(text) for text in texts]
         numbered_lines = "\n".join(
-            f"{i + 1}. {text}" for i, text in enumerate(texts)
+            f"{i + 1}. {text}" for i, text in enumerate(preserved_texts)
         )
+
+        has_delimiters = any(self.LINE_DELIMITER in text for text in preserved_texts)
+        delimiter_instruction = ' Keep " || " delimiters in the same positions.' if has_delimiters else ''
 
         if self._is_translategemma():
             source_code = get_language_code(source_lang)
             target_code = get_language_code(target_lang)
             prompt = f"""You are a professional {source_lang} ({source_code}) to {target_lang} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_lang} text while adhering to {target_lang} grammar, vocabulary, and cultural sensitivities.
 
-Translate each numbered line below. Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".
+Translate each numbered line below. Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}
 
 {numbered_lines}"""
         else:
             prompt = f"""Translate each line from {source_lang} to {target_lang}.
-Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".
+Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}
 
 {numbered_lines}"""
 
@@ -278,6 +313,9 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
 
         if translated_texts is None:
             return None  # Parsing failed, can retry with smaller batch
+
+        # Restore linebreaks in translated texts
+        translated_texts = [self._restore_linebreaks(text) for text in translated_texts]
 
         # Build result with preserved timestamps
         result = []
