@@ -107,7 +107,7 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
         return
 
     source_lang = click.prompt('Source language', default='English')
-    target_lang = click.prompt('Target language')
+    target_lang = click.prompt('Target language', default='Chinese')
     want_bilingual = click.confirm('Create bilingual subtitle (original + translation)?', default=False)
 
     # Load config and show model info
