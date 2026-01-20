@@ -108,6 +108,7 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
 
     source_lang = click.prompt('Source language', default='English')
     target_lang = click.prompt('Target language')
+    want_bilingual = click.confirm('Create bilingual subtitle (original + translation)?', default=False)
 
     # Load config and show model info
     config = load_config()
@@ -147,8 +148,8 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
 
         click.echo(f"✓ Translated SRT created: {translated_srt_path.name}")
 
-        # Ask about bilingual output
-        if click.confirm('Would you like a bilingual subtitle (original + translation)?', default=False):
+        # Create bilingual output if requested
+        if want_bilingual:
             bilingual_segments = create_bilingual_segments(segments, translated_segments)
             bilingual_srt_path = output_dir / f"{date_prefix}_{base_name}.bilingual.srt"
             writer.write_srt(bilingual_segments, str(bilingual_srt_path))
