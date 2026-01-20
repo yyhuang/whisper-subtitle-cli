@@ -153,6 +153,25 @@ class TestOllamaTranslator:
 
             assert 'timed out' in str(exc_info.value)
 
+    def test_translate_text_http_error_with_message(self, translator):
+        """Test handling of HTTP errors with error message in response."""
+        import requests as req
+
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_response.json.return_value = {'error': "model 'qwen2.5:7b' not found"}
+
+        http_error = req.exceptions.HTTPError(response=mock_response)
+
+        with patch('src.translator.requests.post') as mock_post:
+            mock_post.return_value.raise_for_status.side_effect = http_error
+
+            with pytest.raises(RuntimeError) as exc_info:
+                translator.translate_text('Hello', 'English', 'Chinese')
+
+            assert "model 'qwen2.5:7b' not found" in str(exc_info.value)
+            assert 'Ollama API error' in str(exc_info.value)
+
     def test_translate_segments_empty_list(self, translator):
         """Test translating empty segment list."""
         result = translator.translate_segments([], 'English', 'Chinese')
@@ -321,15 +340,15 @@ class TestBatchTranslation:
 
         assert result is None
 
-    def test_try_translate_batch_returns_none_on_connection_error(self, translator, sample_segments):
-        """Test that batch translation returns None on connection error."""
+    def test_try_translate_batch_raises_on_connection_error(self, translator, sample_segments):
+        """Test that batch translation raises ConnectionError on connection error."""
         import requests as req
 
         with patch('src.translator.requests.post') as mock_post:
             mock_post.side_effect = req.exceptions.ConnectionError()
-            result = translator._try_translate_batch(sample_segments, 'English', 'Chinese')
 
-        assert result is None
+            with pytest.raises(ConnectionError):
+                translator._try_translate_batch(sample_segments, 'English', 'Chinese')
 
     def test_translate_batch_recursive_success(self, translator, sample_segments):
         """Test recursive batch translation succeeds on first try."""
@@ -390,21 +409,19 @@ class TestBatchTranslation:
         assert result[0]['start'] == 0.0
         assert result[0]['end'] == 2.5
 
-    def test_translate_batch_recursive_keeps_original_on_total_failure(self, translator):
-        """Test that original text is kept when all translation attempts fail."""
+    def test_translate_batch_recursive_raises_on_total_failure(self, translator):
+        """Test that errors propagate when all translation attempts fail."""
         single_segment = [{'start': 0.0, 'end': 2.5, 'text': 'Hello'}]
-
-        import requests as req
 
         # Make all translation attempts fail
         with patch.object(translator, '_try_translate_batch', return_value=None):
             with patch.object(translator, 'translate_text', side_effect=RuntimeError("Failed")):
-                result = translator._translate_batch_recursive(
-                    single_segment, 'English', 'Chinese', total_segments=1
-                )
+                with pytest.raises(RuntimeError) as exc_info:
+                    translator._translate_batch_recursive(
+                        single_segment, 'English', 'Chinese', total_segments=1
+                    )
 
-        assert len(result) == 1
-        assert result[0]['text'] == 'Hello'  # Original text preserved
+                assert "Failed" in str(exc_info.value)
 
     def test_translate_segments_uses_batching(self, translator, sample_segments):
         """Test that translate_segments uses batch processing."""

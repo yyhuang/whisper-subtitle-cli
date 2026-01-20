@@ -90,6 +90,14 @@ class OllamaTranslator:
             )
         except requests.exceptions.Timeout:
             raise RuntimeError("Translation request timed out")
+        except requests.exceptions.HTTPError as e:
+            # Try to extract error message from response
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("error", str(e))
+            except (ValueError, AttributeError):
+                error_msg = str(e)
+            raise RuntimeError(f"Ollama API error: {error_msg}")
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Translation failed: {e}")
 
@@ -201,29 +209,25 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
         texts = [seg['text'] for seg in segments]
         prompt = self._build_batch_prompt(texts, source_lang, target_lang)
 
-        try:
-            # Longer timeout for batches
-            timeout = max(120, len(segments) * 5)
-            response = self._call_ollama(prompt, timeout=timeout)
+        # Longer timeout for batches
+        timeout = max(120, len(segments) * 5)
+        response = self._call_ollama(prompt, timeout=timeout)
 
-            translated_texts = self._parse_batch_response(response, len(segments))
+        translated_texts = self._parse_batch_response(response, len(segments))
 
-            if translated_texts is None:
-                return None  # Parsing failed
+        if translated_texts is None:
+            return None  # Parsing failed, can retry with smaller batch
 
-            # Build result with preserved timestamps
-            result = []
-            for seg, translated_text in zip(segments, translated_texts):
-                result.append({
-                    'start': seg['start'],
-                    'end': seg['end'],
-                    'text': translated_text
-                })
+        # Build result with preserved timestamps
+        result = []
+        for seg, translated_text in zip(segments, translated_texts):
+            result.append({
+                'start': seg['start'],
+                'end': seg['end'],
+                'text': translated_text
+            })
 
-            return result
-
-        except (ConnectionError, RuntimeError):
-            return None
+        return result
 
     def _translate_batch_recursive(
         self,
@@ -263,24 +267,18 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
         # Base case: single segment, can't split further
         if len(segments) == 1:
             # Try single translation as last resort
-            try:
-                translated_text = self.translate_text(
-                    segments[0]['text'],
-                    source_lang,
-                    target_lang
-                )
-                if progress_callback:
-                    progress_callback(progress_offset + 1, total_segments)
-                return [{
-                    'start': segments[0]['start'],
-                    'end': segments[0]['end'],
-                    'text': translated_text
-                }]
-            except (ConnectionError, RuntimeError):
-                # Last resort: keep original text
-                if progress_callback:
-                    progress_callback(progress_offset + 1, total_segments)
-                return [segments[0]]
+            translated_text = self.translate_text(
+                segments[0]['text'],
+                source_lang,
+                target_lang
+            )
+            if progress_callback:
+                progress_callback(progress_offset + 1, total_segments)
+            return [{
+                'start': segments[0]['start'],
+                'end': segments[0]['end'],
+                'text': translated_text
+            }]
 
         # Recursive case: split in half and try each
         mid = len(segments) // 2
