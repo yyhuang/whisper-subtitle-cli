@@ -174,7 +174,7 @@ This is useful when:
 - See [INSTALL.md](INSTALL.md) for Ollama setup instructions
 
 **Configuration:**
-Edit `config.json` to change the translation model or settings:
+Edit `config.json` to change settings:
 ```json
 {
   "ollama": {
@@ -182,13 +182,17 @@ Edit `config.json` to change the translation model or settings:
     "base_url": "http://localhost:11434",
     "batch_size": 50,
     "keep_alive": "10m"
+  },
+  "output": {
+    "directory": "/path/to/subtitles"
   }
 }
 ```
 
-- `model`: Ollama model for translation
-- `batch_size`: Segments per API call (higher = better context, more memory)
-- `keep_alive`: How long model stays loaded (`"10m"`, `"1h"`, `"-1"` for indefinitely)
+- `ollama.model`: Ollama model for translation
+- `ollama.batch_size`: Segments per API call (higher = better context, more memory)
+- `ollama.keep_alive`: How long model stays loaded (`"10m"`, `"1h"`, `"-1"` for indefinitely)
+- `output.directory`: Default output directory (overrides default, can be overridden by `--output` flag)
 
 **Note:** Translation uses Ollama's local API only. The `base_url` can point to a remote Ollama server, but other APIs (OpenAI, Claude, etc.) are not supported.
 

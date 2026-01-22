@@ -47,9 +47,9 @@ All subtitle files include a date prefix (YYYYMMDD format) and use underscores i
 
 ## Configuration
 
-### Ollama Settings (`config.json`)
-Configure the Ollama model and API URL in `config.json` at the project root:
+Settings are configured in `config.json` at the project root.
 
+### Full Configuration Example
 ```json
 {
   "ollama": {
@@ -57,10 +57,20 @@ Configure the Ollama model and API URL in `config.json` at the project root:
     "base_url": "http://localhost:11434",
     "batch_size": 50,
     "keep_alive": "10m"
+  },
+  "output": {
+    "directory": "/path/to/subtitles"
   }
 }
 ```
 
+### Output Settings
+- **output.directory**: Default output directory for all subtitle files
+  - If not set, uses default locations (temp dir for URLs, video's directory for local files)
+  - Can be overridden by `--output` CLI flag
+  - Priority: CLI argument > config > default
+
+### Ollama Settings
 - **model**: The Ollama model to use for translation (default: `translategemma:4b`)
 - **base_url**: Ollama API URL, can point to remote Ollama server (default: `http://localhost:11434`)
 - **batch_size**: Number of segments to translate per API call (default: `50`)

@@ -42,6 +42,35 @@ def is_srt_file(path: str) -> bool:
     return path.lower().endswith('.srt')
 
 
+def get_output_directory(cli_output: str, config: dict, default_path: Path) -> Path:
+    """
+    Determine output directory with priority: CLI argument > config > default.
+
+    Args:
+        cli_output: Output directory from CLI --output flag (or None)
+        config: Configuration dictionary from load_config()
+        default_path: Default path to use if neither CLI nor config specifies
+
+    Returns:
+        Path object for the output directory
+    """
+    # Priority 1: CLI argument
+    if cli_output:
+        output_dir = Path(cli_output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return output_dir
+
+    # Priority 2: Config file
+    config_output = config.get('output', {}).get('directory')
+    if config_output:
+        output_dir = Path(config_output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return output_dir
+
+    # Priority 3: Default
+    return default_path
+
+
 def get_date_prefix(upload_date: str = None, file_path: Path = None) -> str:
     """
     Get date prefix for filename in YYYYMMDD format.
@@ -93,7 +122,7 @@ def create_bilingual_segments(original_segments, translated_segments):
     return bilingual
 
 
-def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
+def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config):
     """
     Handle subtitle translation workflow.
 
@@ -103,6 +132,7 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
         output_dir: Directory for output files
         date_prefix: Date prefix for filenames
         base_name: Base name for output files
+        config: Configuration dictionary from load_config()
 
     Returns:
         Translation time in seconds, or None if translation was skipped
@@ -114,8 +144,7 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
     target_lang = click.prompt('Target language', default='Chinese')
     want_bilingual = click.confirm('Create bilingual subtitle (original + translation)?', default=True)
 
-    # Load config and show model info
-    config = load_config()
+    # Show model info
     model_name = config['ollama']['model']
     click.echo(f"\nUsing Ollama model: {model_name}")
 
@@ -171,13 +200,14 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
         return None
 
 
-def handle_srt_translation(srt_path: str, output: str = None):
+def handle_srt_translation(srt_path: str, output: str, config: dict):
     """
     Handle translation of an existing SRT file.
 
     Args:
         srt_path: Path to the SRT file
-        output: Optional output directory
+        output: Output directory from CLI argument (or None)
+        config: Configuration dictionary from load_config()
     """
     srt_file = Path(srt_path)
     click.echo(f"SRT file detected: {srt_file.name}")
@@ -193,12 +223,8 @@ def handle_srt_translation(srt_path: str, output: str = None):
 
     click.echo(f"✓ Parsed {len(segments)} segments from SRT file")
 
-    # Determine output directory
-    if output:
-        output_dir = Path(output)
-        output_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        output_dir = srt_file.parent
+    # Determine output directory (priority: CLI > config > default)
+    output_dir = get_output_directory(output, config, srt_file.parent)
 
     # Extract base name and date prefix from filename
     # Expected format: YYYYMMDD_name.srt or YYYYMMDD_name.Language.srt
@@ -219,7 +245,7 @@ def handle_srt_translation(srt_path: str, output: str = None):
         base_name = rest
 
     # Go directly to translation
-    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
+    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config)
 
     click.echo("\n✅ Done!")
 
@@ -269,9 +295,12 @@ def main(data_input, model, language, output, keep_audio):
       python main.py existing.srt
     """
     try:
+        # Load config for output directory settings
+        config = load_config()
+
         # Handle SRT file input - skip to translation
         if is_srt_file(data_input):
-            handle_srt_translation(data_input, output)
+            handle_srt_translation(data_input, output, config)
             return
 
         # Step 0: Handle URL vs file path
@@ -318,12 +347,8 @@ def main(data_input, model, language, output, keep_audio):
                     # Get date prefix from video upload date
                     date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
 
-                    # Determine output directory (use temp directory for URL downloads)
-                    if output:
-                        output_dir = Path(output)
-                        output_dir.mkdir(parents=True, exist_ok=True)
-                    else:
-                        output_dir = downloader.download_dir  # Use temp directory
+                    # Determine output directory (priority: CLI > config > temp directory)
+                    output_dir = get_output_directory(output, config, downloader.download_dir)
 
                     srt_path = output_dir / f"{date_prefix}_{base_name}.srt"
 
@@ -337,7 +362,7 @@ def main(data_input, model, language, output, keep_audio):
                     click.echo(f"✓ Subtitle downloaded: {srt_path}")
 
                     # Offer translation
-                    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
+                    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config)
 
                     click.echo("\n✅ Done! Subtitle download complete.")
                     click.echo(f"\nOutput files saved to:")
@@ -381,13 +406,10 @@ def main(data_input, model, language, output, keep_audio):
 
             click.echo(f"Processing: {video_path.name}")
 
-        # Determine output directory
-        if output:
-            output_dir = Path(output)
-            output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            # For local files, use file's directory; for URLs, use temp directory
-            output_dir = video_path.parent if not is_url_input else video_path.parent
+        # Determine output directory (priority: CLI > config > default)
+        # Default: file's directory for local files, temp directory for URLs
+        default_output = video_path.parent
+        output_dir = get_output_directory(output, config, default_output)
 
         # Generate output file paths with date prefix
         audio_path = output_dir / f"{date_prefix}_{base_name}.wav"
@@ -423,7 +445,7 @@ def main(data_input, model, language, output, keep_audio):
         click.echo(f"✓ SRT file created: {srt_path}")
 
         # Step 4: Offer translation (for URL inputs this becomes [4/4])
-        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name)
+        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config)
 
         # Clean up audio file if not keeping it
         if not keep_audio and audio_path.exists():

@@ -47,6 +47,9 @@ def load_config() -> dict:
             "base_url": "http://localhost:11434",
             "batch_size": 50,
             "keep_alive": "10m"
+        },
+        "output": {
+            "directory": None  # None means use default locations
         }
     }
 
@@ -56,6 +59,9 @@ def load_config() -> dict:
             # Deep merge for ollama section
             if 'ollama' in file_config:
                 default_config['ollama'].update(file_config['ollama'])
+            # Deep merge for output section
+            if 'output' in file_config:
+                default_config['output'].update(file_config['output'])
             return default_config
 
     return default_config

@@ -275,3 +275,77 @@ class TestTranslationPrompt:
             # Verify SRT file exists
             srt_files = list(Path(tmpdir).glob('*.srt'))
             assert len(srt_files) == 1
+
+
+class TestOutputDirectoryPriority:
+    """Tests for output directory configuration priority: CLI > config > default."""
+
+    def test_cli_argument_has_highest_priority(self):
+        """CLI --output flag should override both config and default."""
+        with tempfile.TemporaryDirectory() as cli_dir:
+            with tempfile.TemporaryDirectory() as config_dir:
+                with tempfile.TemporaryDirectory() as default_dir:
+                    config = {'output': {'directory': config_dir}}
+
+                    result = main.get_output_directory(cli_dir, config, Path(default_dir))
+
+                    assert result == Path(cli_dir)
+
+    def test_config_has_second_priority(self):
+        """Config output.directory should be used when CLI is not provided."""
+        with tempfile.TemporaryDirectory() as config_dir:
+            with tempfile.TemporaryDirectory() as default_dir:
+                config = {'output': {'directory': config_dir}}
+
+                result = main.get_output_directory(None, config, Path(default_dir))
+
+                assert result == Path(config_dir)
+
+    def test_default_used_when_no_cli_or_config(self):
+        """Default path should be used when neither CLI nor config is set."""
+        with tempfile.TemporaryDirectory() as default_dir:
+            config = {'output': {'directory': None}}
+
+            result = main.get_output_directory(None, config, Path(default_dir))
+
+            assert result == Path(default_dir)
+
+    def test_default_used_when_config_output_missing(self):
+        """Default path should be used when config has no output section."""
+        with tempfile.TemporaryDirectory() as default_dir:
+            config = {'ollama': {'model': 'test'}}  # No output section
+
+            result = main.get_output_directory(None, config, Path(default_dir))
+
+            assert result == Path(default_dir)
+
+    def test_default_used_when_config_empty(self):
+        """Default path should be used when config is empty."""
+        with tempfile.TemporaryDirectory() as default_dir:
+            config = {}
+
+            result = main.get_output_directory(None, config, Path(default_dir))
+
+            assert result == Path(default_dir)
+
+    def test_cli_creates_directory_if_not_exists(self):
+        """CLI output directory should be created if it doesn't exist."""
+        with tempfile.TemporaryDirectory() as base_dir:
+            new_dir = Path(base_dir) / 'new_output_dir'
+            config = {'output': {'directory': None}}
+
+            result = main.get_output_directory(str(new_dir), config, Path(base_dir))
+
+            assert result == new_dir
+            assert new_dir.exists()
+
+    def test_config_creates_directory_if_not_exists(self):
+        """Config output directory should be created if it doesn't exist."""
+        with tempfile.TemporaryDirectory() as base_dir:
+            new_dir = Path(base_dir) / 'config_output_dir'
+            config = {'output': {'directory': str(new_dir)}}
+
+            result = main.get_output_directory(None, config, Path(base_dir))
+
+            assert result == new_dir
+            assert new_dir.exists()
