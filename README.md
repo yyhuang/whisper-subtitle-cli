@@ -81,50 +81,30 @@ uv run python main.py "https://youtu.be/VIDEO_ID"  # Short format
 
 # Other platforms (Vimeo, Twitch, etc.)
 uv run python main.py "https://vimeo.com/123456"
-
-# Auto-translate after transcription (no prompts)
-uv run python main.py video.mp4 --yes
-uv run python main.py video.mp4 --language zh --yes  # Chinese → Chinese translation
 ```
 
-### The `--yes` Flag
+### Whisper Model Options
 
-Use `--yes` (or `-y`) to auto-translate after transcription without prompts. Useful when transcription takes a long time and you want to walk away.
+| Model | Size | Speed | Accuracy | Use Case |
+|-------|------|-------|----------|----------|
+| tiny | ~39MB | Fastest | Basic | Quick tests, simple audio |
+| base | ~140MB | Fast | Good | Faster alternative |
+| small | ~470MB | Moderate | Better | Clear speech, important content |
+| medium | ~1.5GB | Slow | High | **Default - Professional use** |
+| large | ~2.9GB | Slowest | Best | Maximum accuracy needed |
 
-```bash
-uv run python main.py video.mp4 --yes
-```
+### Language Codes
 
-Translation defaults with `--yes`:
-- Source language: value of `--language` if provided, otherwise "English"
-- Target language: "Chinese"
-- Bilingual subtitle: Yes
+Common language codes (or use auto-detect by omitting):
+- `en` - English
+- `zh` - Chinese
+- `es` - Spanish
+- `fr` - French
+- `de` - German
+- `ja` - Japanese
+- `ko` - Korean
 
-**Example: URL with no subtitles available**
-```bash
-uv run python main.py "https://youtube.com/..." --language en --yes
-
-# No subtitles found, transcribing...
-# (transcription runs, you can walk away)
-# ✓ SRT file created: 20260123_video_id.srt
-# Auto-translates: English → Chinese, bilingual
-# ✓ Translated SRT created: 20260123_video_id.Chinese.srt
-# ✓ Bilingual SRT created: 20260123_video_id.bilingual.srt
-# ✅ Done!
-```
-
-**Example: URL with subtitles available**
-```bash
-uv run python main.py "https://youtube.com/..." --language en --yes
-
-# Available subtitles:
-#   1. English (en)
-#   2. Spanish (es)
-#   0. Transcribe video instead
-# Which subtitle would you like to download? [0]:    ← still prompts here
-#
-# (after you choose, auto-translates without further prompts)
-```
+[Full list of supported languages](https://github.com/openai/whisper#available-models-and-languages)
 
 ### Subtitle Download (YouTube)
 
@@ -240,28 +220,44 @@ Edit `config.json` to change settings:
 
 **Note:** Translation uses Ollama's local API only. The `base_url` can point to a remote Ollama server, but other APIs (OpenAI, Claude, etc.) are not supported.
 
-### Whisper Model Options
+### The `--yes` Flag
 
-| Model | Size | Speed | Accuracy | Use Case |
-|-------|------|-------|----------|----------|
-| tiny | ~39MB | Fastest | Basic | Quick tests, simple audio |
-| base | ~140MB | Fast | Good | Faster alternative |
-| small | ~470MB | Moderate | Better | Clear speech, important content |
-| medium | ~1.5GB | Slow | High | **Default - Professional use** |
-| large | ~2.9GB | Slowest | Best | Maximum accuracy needed |
+Use `--yes` (or `-y`) to auto-translate after transcription without prompts. Useful when transcription takes a long time and you want to walk away.
 
-### Language Codes
+```bash
+uv run python main.py video.mp4 --yes
+```
 
-Common language codes (or use auto-detect by omitting):
-- `en` - English
-- `zh` - Chinese
-- `es` - Spanish
-- `fr` - French
-- `de` - German
-- `ja` - Japanese
-- `ko` - Korean
+Translation defaults with `--yes`:
+- Source language: value of `--language` if provided, otherwise "English"
+- Target language: "Chinese"
+- Bilingual subtitle: Yes
 
-[Full list of supported languages](https://github.com/openai/whisper#available-models-and-languages)
+**Example: URL with no subtitles available**
+```bash
+uv run python main.py "https://youtube.com/..." --language en --yes
+
+# No subtitles found, transcribing...
+# (transcription runs, you can walk away)
+# ✓ SRT file created: 20260123_video_id.srt
+# Auto-translates: English → Chinese, bilingual
+# ✓ Translated SRT created: 20260123_video_id.Chinese.srt
+# ✓ Bilingual SRT created: 20260123_video_id.bilingual.srt
+# ✅ Done!
+```
+
+**Example: URL with subtitles available**
+```bash
+uv run python main.py "https://youtube.com/..." --language en --yes
+
+# Available subtitles:
+#   1. English (en)
+#   2. Spanish (es)
+#   0. Transcribe video instead
+# Which subtitle would you like to download? [0]:    ← still prompts here
+#
+# (after you choose, auto-translates without further prompts)
+```
 
 ## Output Format
 

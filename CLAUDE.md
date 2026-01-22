@@ -86,7 +86,7 @@ Settings are configured in `config.json` at the project root.
 - `--language`: Source language code for transcription (e.g., en, zh, es). Auto-detect if not specified.
 - `--output`, `-o`: Output directory for subtitle files
 - `--keep-audio`: Keep the extracted audio file (WAV)
-- `--yes`, `-y`: Auto-accept translation prompts with defaults (see below)
+- `--yes`, `-y`: Auto-accept translation prompts with defaults
 
 ## Project Structure
 ```
