@@ -30,8 +30,8 @@ All subtitle files include a date prefix (YYYYMMDD format) and use underscores i
 
 **Output Location**:
 - **YouTube/URL inputs**: Saved to system temp directory (platform-specific)
-  - macOS/Linux: `/tmp/`
-  - Windows: `%TEMP%`
+  - macOS: `/tmp/`
+  - Linux/Windows: System temp directory (`tempfile.gettempdir()`)
   - OS automatically cleans up temp files
 - **Local video files**: Saved to same directory as the video file
 - **Custom output**: Use `--output` flag to specify custom directory
@@ -90,13 +90,14 @@ whisper-subtitle-cli/
 ├── tests/
 │   ├── test_transcriber.py
 │   ├── test_subtitle_writer.py
+│   ├── test_subtitle_download.py
 │   ├── test_audio_extractor.py
 │   ├── test_video_downloader.py
 │   ├── test_translator.py
 │   └── test_main_integration.py
 ├── pyproject.toml
 ├── uv.lock                 # uv lock file
-├── .python-version         # Python version for pyenv
+├── .python-version         # Python version (used by uv)
 └── CLAUDE.md
 ```
 
@@ -206,9 +207,10 @@ uv run python main.py video.mp4
 # Output:
 ✓ SRT file created: 20260119_video.srt
 
-Would you like to translate the subtitles? [y/N]: y
-Source language [English]: English
-Target language: Chinese
+Would you like to translate the subtitles? [Y/n]:
+Source language [English]:
+Target language [Chinese]:
+Create bilingual subtitle (original + translation)? [Y/n]:
 
 Using Ollama model: translategemma:4b
 

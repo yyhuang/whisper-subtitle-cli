@@ -17,20 +17,23 @@ Extract subtitles from video files or YouTube URLs using AI transcription (OpenA
 
 **Prerequisites:**
 - Python 3.11 or 3.12 (not 3.13+, due to dependency compatibility)
-- Poetry
+- uv (Python package manager)
 - ffmpeg
 - Ollama (optional, for subtitle translation)
 
 ```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install ffmpeg
 brew install ffmpeg  # macOS
 # or: sudo apt install ffmpeg  # Linux
 
-# Install project dependencies
-poetry install --no-root
+# Install project dependencies (uv will automatically install Python if needed)
+uv sync
 ```
 
-**New to Python?** We recommend using [pyenv](https://github.com/pyenv/pyenv) to install the correct Python version. See [INSTALL.md](INSTALL.md) for detailed step-by-step instructions including pyenv setup and troubleshooting.
+See [INSTALL.md](INSTALL.md) for detailed step-by-step instructions and troubleshooting.
 
 ## Usage
 
@@ -39,13 +42,13 @@ poetry install --no-root
 Extract subtitles from a local video file:
 
 ```bash
-python main.py video.mp4
+uv run python main.py video.mp4
 ```
 
 Extract subtitles from a YouTube URL:
 
 ```bash
-python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
 This creates an SRT file with date prefix (YYYYMMDD format):
@@ -60,23 +63,23 @@ This creates an SRT file with date prefix (YYYYMMDD format):
 
 ```bash
 # Use a different model size
-python main.py video.mp4 --model small
+uv run python main.py video.mp4 --model small
 
 # Specify the language (faster than auto-detect)
-python main.py video.mp4 --language en
+uv run python main.py video.mp4 --language en
 
 # Save output to a specific directory
-python main.py video.mp4 --output ./subtitles
+uv run python main.py video.mp4 --output ./subtitles
 
 # Keep the extracted audio file
-python main.py video.mp4 --keep-audio
+uv run python main.py video.mp4 --keep-audio
 
 # YouTube URLs work the same way
-python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
-python main.py "https://youtu.be/VIDEO_ID"  # Short format
+uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+uv run python main.py "https://youtu.be/VIDEO_ID"  # Short format
 
 # Other platforms (Vimeo, Twitch, etc.)
-python main.py "https://vimeo.com/123456"
+uv run python main.py "https://vimeo.com/123456"
 ```
 
 ### Subtitle Download (YouTube)
@@ -84,7 +87,7 @@ python main.py "https://vimeo.com/123456"
 When you provide a YouTube URL, the tool automatically checks for existing subtitles:
 
 ```bash
-python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 
 # The tool will show available subtitles:
 Checking for available subtitles...
@@ -116,14 +119,15 @@ After creating or downloading subtitles, you can translate them to another langu
 **Translate during transcription:**
 
 ```bash
-python main.py video.mp4
+uv run python main.py video.mp4
 
 # After transcription completes:
 ✓ SRT file created: 20250119_video.srt
 
-Would you like to translate the subtitles? [y/N]: y
-Source language [English]: English
-Target language: Chinese
+Would you like to translate the subtitles? [Y/n]:
+Source language [English]:
+Target language [Chinese]:
+Create bilingual subtitle (original + translation)? [Y/n]:
 
 Using Ollama model: translategemma:4b
 
@@ -139,7 +143,7 @@ Translating 150 segments...
 If you already have an SRT file (from a previous run or another source), you can translate it directly without re-downloading or re-transcribing:
 
 ```bash
-python main.py existing_subtitle.srt
+uv run python main.py existing_subtitle.srt
 
 # Output:
 SRT file detected: existing_subtitle.srt
@@ -147,9 +151,9 @@ Skipping download/transcription, going directly to translation.
 
 ✓ Parsed 150 segments from SRT file
 
-Would you like to translate the subtitles? [y/N]: y
-Source language [English]: English
-Target language: Japanese
+Would you like to translate the subtitles? [Y/n]:
+Source language [English]:
+Target language [Chinese]: Japanese
 
 Using Ollama model: translategemma:4b
 
@@ -235,10 +239,10 @@ This is a test.
 
 ```bash
 # Run all tests
-poetry run pytest -v
+uv run pytest -v
 
 # Run specific test file
-poetry run pytest tests/test_transcriber.py -v
+uv run pytest tests/test_transcriber.py -v
 ```
 
 ### Project Structure
@@ -254,8 +258,8 @@ whisper-subtitle-cli/
 ├── tests/                     # Unit and integration tests
 ├── main.py                    # CLI entry point
 ├── config.json                # Ollama configuration
-├── pyproject.toml             # Poetry dependencies
-├── .python-version            # Python version for pyenv
+├── pyproject.toml             # uv dependencies
+├── .python-version            # Python version (used by uv)
 └── README.md                  # Documentation
 ```
 
