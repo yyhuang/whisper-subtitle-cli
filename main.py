@@ -107,12 +107,12 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name):
     Returns:
         Translation time in seconds, or None if translation was skipped
     """
-    if not click.confirm('\nWould you like to translate the subtitles?', default=False):
+    if not click.confirm('\nWould you like to translate the subtitles?', default=True):
         return None
 
     source_lang = click.prompt('Source language', default='English')
     target_lang = click.prompt('Target language', default='Chinese')
-    want_bilingual = click.confirm('Create bilingual subtitle (original + translation)?', default=False)
+    want_bilingual = click.confirm('Create bilingual subtitle (original + translation)?', default=True)
 
     # Load config and show model info
     config = load_config()
