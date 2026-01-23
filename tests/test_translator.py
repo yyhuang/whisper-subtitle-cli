@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch, Mock, MagicMock
 
-from src.translator import OllamaTranslator, load_config, get_language_code
+from src.translator import OllamaTranslator, load_config, get_language_code, get_language_name, parse_language
 
 
 class TestGetLanguageCode:
@@ -23,6 +23,81 @@ class TestGetLanguageCode:
     def test_get_language_code_unknown(self):
         """Test fallback for unknown language."""
         assert get_language_code('Klingon') == 'kl'
+
+
+class TestParseLanguage:
+    """Tests for the parse_language function."""
+
+    def test_parse_language_name(self):
+        """Test parsing a language name returns (name, code) tuple."""
+        assert parse_language('Korean') == ('Korean', 'ko')
+        assert parse_language('English') == ('English', 'en')
+        assert parse_language('Chinese') == ('Chinese', 'zh')
+
+    def test_parse_language_code(self):
+        """Test parsing a language code returns (name, code) tuple."""
+        assert parse_language('ko') == ('Korean', 'ko')
+        assert parse_language('en') == ('English', 'en')
+        assert parse_language('zh') == ('Chinese', 'zh')
+
+    def test_parse_language_case_insensitive(self):
+        """Test parsing is case-insensitive."""
+        assert parse_language('KOREAN') == ('Korean', 'ko')
+        assert parse_language('korean') == ('Korean', 'ko')
+        assert parse_language('Ko') == ('Korean', 'ko')
+
+    def test_parse_language_with_whitespace(self):
+        """Test parsing strips whitespace."""
+        assert parse_language(' Korean ') == ('Korean', 'ko')
+        assert parse_language(' ko ') == ('Korean', 'ko')
+
+    def test_parse_language_unrecognized(self):
+        """Test parsing unrecognized input returns None."""
+        assert parse_language('Klingon') is None
+        assert parse_language('xx') is None
+        assert parse_language('') is None
+
+    def test_parse_language_all_whisper_codes(self):
+        """Test that common Whisper language codes are recognized."""
+        # Test a sample of codes across the mapping
+        assert parse_language('ja') == ('Japanese', 'ja')
+        assert parse_language('fr') == ('French', 'fr')
+        assert parse_language('de') == ('German', 'de')
+        assert parse_language('haw') == ('Hawaiian', 'haw')
+        assert parse_language('yue') == ('Cantonese', 'yue')
+
+    def test_parse_language_names_to_codes(self):
+        """Test that language names convert to correct codes."""
+        assert parse_language('Japanese') == ('Japanese', 'ja')
+        assert parse_language('Hawaiian') == ('Hawaiian', 'haw')
+        assert parse_language('Cantonese') == ('Cantonese', 'yue')
+        assert parse_language('Vietnamese') == ('Vietnamese', 'vi')
+
+    def test_parse_language_aliases(self):
+        """Test that language aliases work and preserve the alias name."""
+        assert parse_language('Traditional Chinese') == ('Traditional Chinese', 'zh')
+        assert parse_language('Taiwanese') == ('Taiwanese', 'zh')
+        # Code 'zh' returns primary name 'Chinese'
+        assert parse_language('zh') == ('Chinese', 'zh')
+
+
+class TestGetLanguageName:
+    """Tests for the get_language_name function."""
+
+    def test_get_language_name_from_code(self):
+        """Test getting language name from code."""
+        assert get_language_name('ko') == 'Korean'
+        assert get_language_name('en') == 'English'
+        assert get_language_name('zh') == 'Chinese'
+
+    def test_get_language_name_unknown_code(self):
+        """Test fallback for unknown code returns the code itself."""
+        assert get_language_name('xx') == 'xx'
+
+    def test_get_language_name_case_insensitive(self):
+        """Test code lookup is case-insensitive."""
+        assert get_language_name('KO') == 'Korean'
+        assert get_language_name('En') == 'English'
 
 
 class TestLoadConfig:
@@ -138,7 +213,9 @@ class TestOllamaTranslator:
         translator = OllamaTranslator(model='translategemma:4b', base_url='http://localhost:11434', batch_size=50)
         prompt = translator._build_translategemma_prompt('Hello', 'English', 'Chinese')
 
-        assert 'professional English (en) to Chinese (zh) translator' in prompt
+        # "Chinese" is expanded to "Traditional Chinese (Taiwan, 繁體中文)" in prompts
+        assert 'Traditional Chinese (Taiwan, 繁體中文) (zh) translator' in prompt
+        assert 'English (en)' in prompt
         assert 'Hello' in prompt
 
     def test_preserve_linebreaks(self):

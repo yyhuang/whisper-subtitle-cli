@@ -9,15 +9,89 @@ from typing import List, Dict, Optional, Tuple
 
 # Language name to ISO 639-1 code mapping for TranslateGemma
 LANGUAGE_CODES = {
-    'english': 'en', 'chinese': 'zh', 'spanish': 'es', 'french': 'fr',
-    'german': 'de', 'italian': 'it', 'portuguese': 'pt', 'russian': 'ru',
-    'japanese': 'ja', 'korean': 'ko', 'arabic': 'ar', 'hindi': 'hi',
-    'dutch': 'nl', 'polish': 'pl', 'turkish': 'tr', 'vietnamese': 'vi',
-    'thai': 'th', 'swedish': 'sv', 'danish': 'da', 'norwegian': 'no',
-    'finnish': 'fi', 'greek': 'el', 'czech': 'cs', 'romanian': 'ro',
-    'hungarian': 'hu', 'hebrew': 'he', 'indonesian': 'id', 'malay': 'ms',
-    'tagalog': 'tl', 'ukrainian': 'uk', 'bengali': 'bn', 'tamil': 'ta',
+    'afrikaans': 'af', 'amharic': 'am', 'arabic': 'ar', 'assamese': 'as',
+    'azerbaijani': 'az', 'bashkir': 'ba', 'belarusian': 'be', 'bulgarian': 'bg',
+    'bengali': 'bn', 'tibetan': 'bo', 'breton': 'br', 'bosnian': 'bs',
+    'catalan': 'ca', 'czech': 'cs', 'welsh': 'cy', 'danish': 'da',
+    'german': 'de', 'greek': 'el', 'english': 'en', 'spanish': 'es',
+    'estonian': 'et', 'basque': 'eu', 'persian': 'fa', 'finnish': 'fi',
+    'faroese': 'fo', 'french': 'fr', 'galician': 'gl', 'gujarati': 'gu',
+    'hausa': 'ha', 'hawaiian': 'haw', 'hebrew': 'he', 'hindi': 'hi',
+    'croatian': 'hr', 'haitian': 'ht', 'hungarian': 'hu', 'armenian': 'hy',
+    'indonesian': 'id', 'icelandic': 'is', 'italian': 'it', 'japanese': 'ja',
+    'javanese': 'jw', 'georgian': 'ka', 'kazakh': 'kk', 'khmer': 'km',
+    'kannada': 'kn', 'korean': 'ko', 'latin': 'la', 'luxembourgish': 'lb',
+    'lingala': 'ln', 'lao': 'lo', 'lithuanian': 'lt', 'latvian': 'lv',
+    'malagasy': 'mg', 'maori': 'mi', 'macedonian': 'mk', 'malayalam': 'ml',
+    'mongolian': 'mn', 'marathi': 'mr', 'malay': 'ms', 'maltese': 'mt',
+    'burmese': 'my', 'nepali': 'ne', 'dutch': 'nl', 'nynorsk': 'nn',
+    'norwegian': 'no', 'occitan': 'oc', 'punjabi': 'pa', 'polish': 'pl',
+    'pashto': 'ps', 'portuguese': 'pt', 'romanian': 'ro', 'russian': 'ru',
+    'sanskrit': 'sa', 'sindhi': 'sd', 'sinhala': 'si', 'slovak': 'sk',
+    'slovenian': 'sl', 'shona': 'sn', 'somali': 'so', 'albanian': 'sq',
+    'serbian': 'sr', 'sundanese': 'su', 'swedish': 'sv', 'swahili': 'sw',
+    'tamil': 'ta', 'telugu': 'te', 'tajik': 'tg', 'thai': 'th',
+    'turkmen': 'tk', 'tagalog': 'tl', 'turkish': 'tr', 'tatar': 'tt',
+    'ukrainian': 'uk', 'urdu': 'ur', 'uzbek': 'uz', 'vietnamese': 'vi',
+    'yiddish': 'yi', 'yoruba': 'yo', 'chinese': 'zh', 'cantonese': 'yue',
+    # Aliases (same code, different name for translation context)
+    'traditional chinese': 'zh', 'taiwanese': 'zh',
 }
+
+# Reverse mapping: code → primary name (first occurrence wins)
+LANGUAGE_NAMES = {}
+for _name, _code in LANGUAGE_CODES.items():
+    if _code not in LANGUAGE_NAMES:
+        LANGUAGE_NAMES[_code] = _name.title()
+
+# Prompt-specific language names: how to describe a language to the LLM
+# "Chinese" is ambiguous, so we clarify it as Traditional Chinese (Taiwan) in prompts
+PROMPT_LANGUAGE_NAMES = {
+    'chinese': 'Traditional Chinese (Taiwan, 繁體中文)',
+}
+
+
+def get_prompt_language(language: str) -> str:
+    """
+    Get the language name to use in translation prompts.
+
+    Some languages need clarification for the LLM (e.g., "Chinese" → "Traditional Chinese (Taiwan)").
+
+    Args:
+        language: Language name (e.g., 'Chinese', 'English')
+
+    Returns:
+        Prompt-friendly language name
+    """
+    return PROMPT_LANGUAGE_NAMES.get(language.lower(), language)
+
+
+def parse_language(language: str):
+    """
+    Parse user language input and return (name, code) pair.
+
+    Accepts either a language name (e.g., 'Korean') or code (e.g., 'ko').
+
+    Args:
+        language: User input - language name or code
+
+    Returns:
+        Tuple of (name, code) e.g., ('Korean', 'ko'), or None if unrecognized
+    """
+    lower = language.lower().strip()
+
+    # Check if it's a known name
+    if lower in LANGUAGE_CODES:
+        code = LANGUAGE_CODES[lower]
+        return (lower.title(), code)
+
+    # Check if it's a known code
+    if lower in LANGUAGE_NAMES:
+        name = LANGUAGE_NAMES[lower]
+        return (name, lower)
+
+    # Unrecognized
+    return None
 
 
 def get_language_code(language: str) -> str:
@@ -31,6 +105,19 @@ def get_language_code(language: str) -> str:
         ISO 639-1 code (e.g., 'en', 'zh') or lowercase language name if not found
     """
     return LANGUAGE_CODES.get(language.lower(), language.lower()[:2])
+
+
+def get_language_name(code: str) -> str:
+    """
+    Get language name from ISO 639-1 code.
+
+    Args:
+        code: ISO 639-1 code (e.g., 'ko', 'en')
+
+    Returns:
+        Language name (e.g., 'Korean', 'English') or the code itself if not found
+    """
+    return LANGUAGE_NAMES.get(code.lower(), code)
 
 
 def load_config() -> dict:
@@ -163,10 +250,13 @@ class OllamaTranslator:
         """
         source_code = get_language_code(source_lang)
         target_code = get_language_code(target_lang)
+        # Use prompt-specific names (e.g., "Chinese" → "Traditional Chinese (Taiwan, 繁體中文)")
+        source_prompt = get_prompt_language(source_lang)
+        target_prompt = get_prompt_language(target_lang)
 
         delimiter_instruction = ' Keep " || " delimiters in the same positions.' if has_delimiter else ''
 
-        return f"""You are a professional {source_lang} ({source_code}) to {target_lang} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_lang} text while adhering to {target_lang} grammar, vocabulary, and cultural sensitivities. Produce only the {target_lang} translation, without any additional explanations or commentary.{delimiter_instruction}
+        return f"""You are a professional {source_prompt} ({source_code}) to {target_prompt} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_prompt} text while adhering to {target_prompt} grammar, vocabulary, and cultural sensitivities. Produce only the {target_prompt} translation, without any additional explanations or commentary.{delimiter_instruction}
 
 {text}"""
 
@@ -195,10 +285,12 @@ class OllamaTranslator:
         if self._is_translategemma():
             prompt = self._build_translategemma_prompt(text, source_lang, target_lang, has_delimiter=has_linebreaks)
         else:
+            source_prompt = get_prompt_language(source_lang)
+            target_prompt = get_prompt_language(target_lang)
             if has_linebreaks:
-                prompt = f"Translate the following from {source_lang} to {target_lang}. Only output the translation. Keep \" || \" delimiters in the same positions:\n\n{text}"
+                prompt = f"Translate the following from {source_prompt} to {target_prompt}. Only output the translation. Keep \" || \" delimiters in the same positions:\n\n{text}"
             else:
-                prompt = f"Translate the following from {source_lang} to {target_lang}. Only output the translation, nothing else:\n\n{text}"
+                prompt = f"Translate the following from {source_prompt} to {target_prompt}. Only output the translation, nothing else:\n\n{text}"
 
         result = self._call_ollama(prompt, timeout=60)
 
@@ -234,16 +326,19 @@ class OllamaTranslator:
         has_delimiters = any(self.LINE_DELIMITER in text for text in preserved_texts)
         delimiter_instruction = ' Keep " || " delimiters in the same positions.' if has_delimiters else ''
 
+        source_prompt = get_prompt_language(source_lang)
+        target_prompt = get_prompt_language(target_lang)
+
         if self._is_translategemma():
             source_code = get_language_code(source_lang)
             target_code = get_language_code(target_lang)
-            prompt = f"""You are a professional {source_lang} ({source_code}) to {target_lang} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_lang} text while adhering to {target_lang} grammar, vocabulary, and cultural sensitivities.
+            prompt = f"""You are a professional {source_prompt} ({source_code}) to {target_prompt} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_prompt} text while adhering to {target_prompt} grammar, vocabulary, and cultural sensitivities.
 
 Translate each numbered line below. Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}
 
 {numbered_lines}"""
         else:
-            prompt = f"""Translate each line from {source_lang} to {target_lang}.
+            prompt = f"""Translate each line from {source_prompt} to {target_prompt}.
 Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}
 
 {numbered_lines}"""

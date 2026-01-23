@@ -18,7 +18,7 @@ from src.audio_extractor import AudioExtractor
 from src.transcriber import Transcriber
 from src.subtitle_writer import SubtitleWriter
 from src.video_downloader import VideoDownloader, is_url
-from src.translator import OllamaTranslator, load_config
+from src.translator import OllamaTranslator, load_config, parse_language
 
 
 class DataInput(click.ParamType):
@@ -122,7 +122,7 @@ def create_bilingual_segments(original_segments, translated_segments):
     return bilingual
 
 
-def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=False, language=None):
+def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=False, language_name=None):
     """
     Handle subtitle translation workflow.
 
@@ -134,16 +134,16 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, 
         base_name: Base name for output files
         config: Configuration dictionary from load_config()
         yes: If True, skip prompts and use defaults
-        language: Source language code from --language flag (used with --yes)
+        language_name: Source language name from --language flag (used with --yes)
 
     Returns:
         Translation time in seconds, or None if translation was skipped
     """
     if yes:
         # --yes: auto-accept translation with defaults.
-        # Source language uses --language value if provided, otherwise "English".
+        # Source language uses --language name if provided, otherwise "English".
         # Target is always "Chinese", bilingual is always enabled.
-        source_lang = language or 'English'
+        source_lang = language_name or 'English'
         target_lang = 'Chinese'
         want_bilingual = True
     else:
@@ -152,6 +152,20 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, 
 
         source_lang = click.prompt('Source language', default='English')
         target_lang = click.prompt('Target language', default='Chinese')
+
+        # Validate user input for source and target languages
+        for lang_input, label in [(source_lang, 'Source'), (target_lang, 'Target')]:
+            parsed = parse_language(lang_input)
+            if parsed is None:
+                click.echo(f"⚠ Warning: '{lang_input}' not recognized, using as-is.", err=True)
+        # Convert to canonical names if recognized
+        source_parsed = parse_language(source_lang)
+        if source_parsed:
+            source_lang = source_parsed[0]
+        target_parsed = parse_language(target_lang)
+        if target_parsed:
+            target_lang = target_parsed[0]
+
         want_bilingual = click.confirm('Create bilingual subtitle (original + translation)?', default=True)
 
     # Show model info
@@ -210,7 +224,7 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, 
         return None
 
 
-def handle_srt_translation(srt_path: str, output: str, config: dict, yes: bool = False, language: str = None):
+def handle_srt_translation(srt_path: str, output: str, config: dict, yes: bool = False, language_name: str = None):
     """
     Handle translation of an existing SRT file.
 
@@ -219,7 +233,7 @@ def handle_srt_translation(srt_path: str, output: str, config: dict, yes: bool =
         output: Output directory from CLI argument (or None)
         config: Configuration dictionary from load_config()
         yes: If True, skip prompts and use defaults
-        language: Source language code from --language flag (used with --yes)
+        language_name: Source language name from --language flag (used with --yes)
     """
     srt_file = Path(srt_path)
     click.echo(f"SRT file detected: {srt_file.name}")
@@ -257,7 +271,7 @@ def handle_srt_translation(srt_path: str, output: str, config: dict, yes: bool =
         base_name = rest
 
     # Go directly to translation
-    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language=language)
+    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
 
     click.echo("\n✅ Done!")
 
@@ -316,9 +330,24 @@ def main(data_input, model, language, output, keep_audio, yes):
         # Load config for output directory settings
         config = load_config()
 
+        # Parse language input: accept name ("Korean") or code ("ko")
+        if language:
+            parsed = parse_language(language)
+            if parsed is None:
+                click.echo(
+                    f"❌ Error: '{language}' is not a recognized language.\n"
+                    f"Use a language code (e.g., ko, en, zh) or name (e.g., Korean, English, Chinese).",
+                    err=True
+                )
+                sys.exit(1)
+            language_name, language_code = parsed
+        else:
+            language_name = None
+            language_code = None
+
         # Handle SRT file input - skip to translation
         if is_srt_file(data_input):
-            handle_srt_translation(data_input, output, config, yes=yes, language=language)
+            handle_srt_translation(data_input, output, config, yes=yes, language_name=language_name)
             return
 
         # Step 0: Handle URL vs file path
@@ -382,7 +411,7 @@ def main(data_input, model, language, output, keep_audio, yes):
                     click.echo(f"✓ Subtitle downloaded: {srt_path}")
 
                     # Offer translation
-                    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language=language)
+                    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
 
                     click.echo("\n✅ Done! Subtitle download complete.")
                     click.echo(f"\nOutput files saved to:")
@@ -445,14 +474,14 @@ def main(data_input, model, language, output, keep_audio, yes):
         # Step 2: Transcribe audio
         step_num = "[2/4]" if is_url(data_input) else "[2/3]"
         click.echo(f"\n{step_num} Transcribing audio (model: {model})...")
-        if language:
-            click.echo(f"      Language: {language}")
+        if language_code:
+            click.echo(f"      Language: {language_name} ({language_code})")
         else:
             click.echo("      Language: auto-detect")
 
         transcriber = Transcriber(model_size=model)
         transcribe_start = time.time()
-        segments = transcriber.transcribe(str(audio_path), language=language)
+        segments = transcriber.transcribe(str(audio_path), language=language_code)
         transcribe_time = time.time() - transcribe_start
         click.echo(f"✓ Transcription complete ({len(segments)} segments)")
 
@@ -465,7 +494,7 @@ def main(data_input, model, language, output, keep_audio, yes):
         click.echo(f"✓ SRT file created: {srt_path}")
 
         # Step 4: Offer translation (for URL inputs this becomes [4/4])
-        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language=language)
+        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
 
         # Clean up audio file if not keeping it
         if not keep_audio and audio_path.exists():
