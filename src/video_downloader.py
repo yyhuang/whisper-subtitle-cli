@@ -3,6 +3,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from datetime import datetime
 from typing import Optional, Dict
 import yt_dlp
 
@@ -81,6 +82,17 @@ class VideoDownloader:
 
                 # Get the actual file path
                 file_path = ydl.prepare_filename(info)
+
+                # Set file mtime to upload date so local file processing
+                # uses the correct date prefix
+                upload_date = info.get('upload_date')
+                if upload_date and os.path.exists(file_path):
+                    try:
+                        dt = datetime.strptime(upload_date, '%Y%m%d')
+                        timestamp = dt.timestamp()
+                        os.utime(file_path, (timestamp, timestamp))
+                    except (ValueError, OSError):
+                        pass
 
                 # Return video information
                 return {

@@ -202,6 +202,59 @@ class TestVideoDownloader:
         with pytest.raises(Exception):
             downloader.download("https://youtube.com/watch?v=test")
 
+    @patch('src.video_downloader.os.path.exists', return_value=True)
+    @patch('src.video_downloader.os.utime')
+    @patch('src.video_downloader.yt_dlp.YoutubeDL')
+    def test_download_sets_mtime_to_upload_date(self, mock_youtube_dl, mock_utime, mock_exists):
+        """Test that download sets file mtime to upload date."""
+        mock_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_instance
+        temp_dir = tempfile.gettempdir()
+        file_path = f'{temp_dir}/abc123.mp4'
+
+        mock_instance.extract_info.return_value = {
+            'id': 'abc123',
+            'title': 'Test Video',
+            'duration': 120.5,
+            'extractor': 'youtube',
+            'ext': 'mp4',
+            'upload_date': '20150926'
+        }
+        mock_instance.prepare_filename.return_value = file_path
+
+        downloader = VideoDownloader()
+        result = downloader.download("https://www.youtube.com/watch?v=abc123")
+
+        # Verify os.utime was called with the correct timestamp
+        from datetime import datetime
+        expected_dt = datetime.strptime('20150926', '%Y%m%d')
+        expected_ts = expected_dt.timestamp()
+        mock_utime.assert_called_once_with(file_path, (expected_ts, expected_ts))
+        assert result['upload_date'] == '20150926'
+
+    @patch('src.video_downloader.os.path.exists', return_value=True)
+    @patch('src.video_downloader.os.utime')
+    @patch('src.video_downloader.yt_dlp.YoutubeDL')
+    def test_download_skips_mtime_when_no_upload_date(self, mock_youtube_dl, mock_utime, mock_exists):
+        """Test that download skips mtime setting when no upload_date."""
+        mock_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_instance
+        temp_dir = tempfile.gettempdir()
+
+        mock_instance.extract_info.return_value = {
+            'id': 'abc123',
+            'title': 'Test Video',
+            'duration': 120.5,
+            'extractor': 'youtube',
+            'ext': 'mp4'
+        }
+        mock_instance.prepare_filename.return_value = f'{temp_dir}/abc123.mp4'
+
+        downloader = VideoDownloader()
+        downloader.download("https://www.youtube.com/watch?v=abc123")
+
+        mock_utime.assert_not_called()
+
     def test_is_supported_url_validates_platform(self):
         """Test that is_supported_url validates URL format."""
         downloader = VideoDownloader()
