@@ -6,9 +6,10 @@ Extract subtitles from video files or YouTube URLs using AI transcription (OpenA
 
 ## Quick Start
 
+> **First time?** See [INSTALL.md](INSTALL.md) for detailed setup (uv, ffmpeg, CUDA, Ollama).
+
 ```bash
-# Install prerequisites: uv, ffmpeg, ollama (optional, for translation)
-brew install ffmpeg
+# Install dependencies
 uv sync                   # CPU/CUDA
 uv sync --extra mlx       # Apple Silicon (Metal GPU)
 
