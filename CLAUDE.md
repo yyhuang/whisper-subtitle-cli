@@ -64,7 +64,7 @@ Settings are configured in `config.json` at the project root.
 
 ### Output Settings
 - **output.directory**: Default output directory for all subtitle files
-  - If not set, uses default locations (temp dir for URLs, video's directory for local files)
+  - If not set, uses default locations (cwd for URLs, video's directory for local files)
   - Can be overridden by `--output` CLI flag
   - Priority: CLI argument > config > default
 
@@ -85,6 +85,7 @@ Settings are configured in `config.json` at the project root.
 - `--output`, `-o`: Output directory for subtitle files
 - `--keep-audio`: Keep the extracted audio file (WAV)
 - `--yes`, `-y`: Auto-accept translation prompts with defaults
+- `--check-system`: Display system diagnostics (GPU, CUDA, ffmpeg, Ollama)
 
 ## Project Structure
 ```
@@ -108,6 +109,8 @@ whisper-subtitle-cli/
 ├── pyproject.toml
 ├── uv.lock                 # uv lock file
 ├── .python-version         # Python version (used by uv)
+├── README.md               # User documentation
+├── INSTALL.md              # Installation guide
 └── CLAUDE.md
 ```
 
@@ -131,7 +134,7 @@ All core features implemented and tested:
 - ✅ SRT subtitle file generation
 - ✅ Subtitle translation via local Ollama API (batch processing with recursive retry)
 - ✅ CLI interface with options
-- ✅ Temp directory output for URL downloads
+- ✅ System diagnostics (`--check-system`)
 
 ## Usage
 
@@ -143,7 +146,7 @@ uv run python main.py video.mp4
 
 # Extract subtitles from a YouTube URL
 uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
-# Creates files in system temp directory (/tmp/ on macOS)
+# Creates subtitle files in current working directory
 
 # Short YouTube URL format
 uv run python main.py "https://youtu.be/VIDEO_ID"
@@ -179,9 +182,8 @@ uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 # Works with playlists, shorts, and other platforms
 uv run python main.py "https://vimeo.com/123456"
 
-# Both downloaded videos and subtitle files are saved to system temp directory
-# OS cleans up temp files automatically
-# Subtitles are named after the video title with date prefix
+# Downloaded videos go to temp directory (OS cleans up automatically)
+# Subtitle files are saved to current working directory
 ```
 
 ### Subtitle Download (YouTube)
