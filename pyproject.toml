@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mlx = ["mlx-whisper>=0.4.0"]  # Apple Silicon
+stable = ["stable-ts>=2.0.0"]  # Better timestamp accuracy
 
 [dependency-groups]
 dev = [

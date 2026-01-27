@@ -12,23 +12,42 @@ MLX_MODEL_MAP = {
 
 
 class Transcriber:
-    """Transcribes audio files using openai-whisper or mlx-whisper."""
+    """Transcribes audio files using openai-whisper, mlx-whisper, or stable-ts."""
 
-    def __init__(self, model_size: str = "medium"):
+    def __init__(self, model_size: str = "medium", use_stable: bool = False):
         """
         Initialize the transcriber with a Whisper model.
         Automatically detects the best backend and device.
 
         Args:
             model_size: Size of the Whisper model (tiny, base, small, medium, large)
+            use_stable: If True, use stable-ts for better timestamp accuracy
         """
         self.model_size = model_size
+        self.use_stable = use_stable
         self.backend, self.device, self.compute_type = self._detect_backend()
         self.model = None
 
-    @staticmethod
-    def _detect_backend():
-        """Detect the best backend: mlx on Apple Silicon, openai-whisper otherwise."""
+    def _detect_backend(self):
+        """Detect the best backend based on hardware and use_stable flag."""
+        # With --stable flag: use stable-ts
+        if self.use_stable:
+            try:
+                import stable_whisper  # noqa: F401
+                # Apple Silicon: use stable-ts MLX backend
+                if platform.system() == "Darwin" and platform.machine() == "arm64":
+                    return "stable-ts-mlx", "mlx", "stable-ts (MLX)"
+                # Others: use stable-ts with PyTorch
+                import torch
+                if torch.cuda.is_available():
+                    return "stable-ts", "cuda", "float16"
+                return "stable-ts", "cpu", "float32"
+            except ImportError:
+                raise ImportError(
+                    "stable-ts not installed. Run: uv sync --extra stable"
+                )
+
+        # Without --stable: use standard backends
         # Apple Silicon: prefer mlx-whisper for Metal GPU
         if platform.system() == "Darwin" and platform.machine() == "arm64":
             try:
@@ -45,9 +64,13 @@ class Transcriber:
 
     def _load_model(self):
         """Lazy load the Whisper model when needed."""
-        if self.model is None and self.backend == "openai-whisper":
-            import whisper
-            self.model = whisper.load_model(self.model_size, device=self.device)
+        if self.model is None:
+            if self.backend == "openai-whisper":
+                import whisper
+                self.model = whisper.load_model(self.model_size, device=self.device)
+            elif self.backend == "stable-ts":
+                import stable_whisper
+                self.model = stable_whisper.load_model(self.model_size, device=self.device)
 
     def transcribe(
         self,
@@ -78,6 +101,10 @@ class Transcriber:
         try:
             if self.backend == "mlx":
                 return self._transcribe_mlx(audio_path, language)
+            elif self.backend == "stable-ts":
+                return self._transcribe_stable_ts(audio_path, language)
+            elif self.backend == "stable-ts-mlx":
+                return self._transcribe_stable_ts_mlx(audio_path, language)
             else:
                 return self._transcribe_openai_whisper(audio_path, language)
         except Exception as e:
@@ -120,5 +147,44 @@ class Transcriber:
                 'start': segment['start'],
                 'end': segment['end'],
                 'text': segment['text'].strip()
+            })
+        return result
+
+    def _transcribe_stable_ts(self, audio_path: str, language: Optional[str]) -> List[Dict]:
+        """Transcribe using stable-ts (CUDA/CPU)."""
+        self._load_model()
+
+        kwargs = {}
+        if language:
+            kwargs["language"] = language
+
+        # stable-ts returns a WhisperResult object
+        output = self.model.transcribe(audio_path, **kwargs)
+
+        return self._format_stable_ts_segments(output)
+
+    def _transcribe_stable_ts_mlx(self, audio_path: str, language: Optional[str]) -> List[Dict]:
+        """Transcribe using stable-ts with MLX backend."""
+        import stable_whisper
+
+        model_repo = MLX_MODEL_MAP.get(self.model_size, MLX_MODEL_MAP["medium"])
+
+        kwargs = {}
+        if language:
+            kwargs["language"] = language
+
+        # stable-ts MLX uses transcribe_with_path for MLX models
+        output = stable_whisper.transcribe_with_path(model_repo, audio_path, **kwargs)
+
+        return self._format_stable_ts_segments(output)
+
+    def _format_stable_ts_segments(self, output) -> List[Dict]:
+        """Format stable-ts WhisperResult to our segment format."""
+        result = []
+        for segment in output.segments:
+            result.append({
+                'start': segment.start,
+                'end': segment.end,
+                'text': segment.text.strip()
             })
         return result

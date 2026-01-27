@@ -423,6 +423,14 @@ def run_system_check():
         except ImportError:
             click.echo("  mlx-whisper: Not installed")
             click.echo("    → Run 'uv sync --extra mlx' for Metal GPU acceleration")
+
+        # Check stable-ts on Apple Silicon
+        try:
+            import stable_whisper  # noqa: F401
+            click.echo("  stable-ts: Installed (use --stable for better timestamps)")
+        except ImportError:
+            click.echo("  stable-ts: Not installed")
+            click.echo("    → Run 'uv sync --extra stable' for better timestamp accuracy")
     else:
         # Check NVIDIA/CUDA
         nvidia_info = _get_nvidia_info()
@@ -483,6 +491,14 @@ def run_system_check():
         elif cuda_available:
             click.echo(f"  PyTorch CUDA Device: {torch.cuda.get_device_name(0)}")
 
+        # Check stable-ts on non-Apple Silicon
+        try:
+            import stable_whisper  # noqa: F401
+            click.echo("  stable-ts: Installed (use --stable for better timestamps)")
+        except ImportError:
+            click.echo("  stable-ts: Not installed")
+            click.echo("    → Run 'uv sync --extra stable' for better timestamp accuracy")
+
     # Check ffmpeg
     ffmpeg_ok = _check_ffmpeg()
     click.echo(f"  ffmpeg: {'Installed' if ffmpeg_ok else 'Not found'}")
@@ -534,7 +550,13 @@ def run_system_check():
     default=False,
     help='Check system capabilities (GPU, CUDA, ffmpeg, Ollama)'
 )
-def main(data_input, model, language, output, keep_audio, yes, check_system):
+@click.option(
+    '--stable',
+    is_flag=True,
+    default=False,
+    help='Use stable-ts for better timestamp accuracy (requires: uv sync --extra stable)'
+)
+def main(data_input, model, language, output, keep_audio, yes, check_system, stable):
     """
     Extract subtitles from DATA_INPUT (file path, URL, or SRT file) using AI transcription.
 
@@ -710,7 +732,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system):
         else:
             click.echo("      Language: auto-detect")
 
-        transcriber = Transcriber(model_size=model)
+        transcriber = Transcriber(model_size=model, use_stable=stable)
         click.echo(f"      Device: {transcriber.device} ({transcriber.compute_type})")
         click.echo(f"      Backend: {transcriber.backend}")
         transcribe_start = time.time()

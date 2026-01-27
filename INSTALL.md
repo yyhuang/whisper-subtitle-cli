@@ -271,6 +271,26 @@ uv run python main.py --check-system
 
 This shows your system capabilities and confirms GPU acceleration is working.
 
+### Optional: stable-ts for Better Timestamps
+
+stable-ts is an optional enhancement that improves timestamp accuracy in subtitles. It works with all backends (CPU, CUDA, and MLX).
+
+```bash
+# Install stable-ts
+uv sync --extra stable
+
+# Or combine with mlx (Apple Silicon)
+uv sync --extra mlx --extra stable
+
+# Use with --stable flag
+uv run python main.py video.mp4 --stable
+```
+
+When to use `--stable`:
+- Subtitles are slightly out of sync with audio
+- You need precise timestamps for professional use
+- Standard Whisper timestamps are not accurate enough
+
 ### About Whisper Models (for Transcription)
 
 The **first time you run** the tool, it will automatically download the Whisper AI model. This happens once and is cached for future use.

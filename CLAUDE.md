@@ -16,6 +16,7 @@ CLI tool to generate subtitles from video/audio files using OpenAI Whisper AI mo
 - **uv** for package management
 - **OpenAI Whisper** for AI transcription (CPU/CUDA)
 - **mlx-whisper** (optional) for AI transcription on Apple Silicon via Metal GPU
+- **stable-ts** (optional) for better timestamp accuracy with any backend
 - **ffmpeg** (system dependency) for audio extraction
 - **yt-dlp** for downloading videos from URLs
 - **Ollama** (local) for subtitle translation
@@ -86,6 +87,7 @@ Settings are configured in `config.json` at the project root.
 - `--keep-audio`: Keep the extracted audio file (WAV)
 - `--yes`, `-y`: Auto-accept translation prompts with defaults
 - `--check-system`: Display system diagnostics (GPU, CUDA, ffmpeg, Ollama)
+- `--stable`: Use stable-ts for better timestamp accuracy (requires: `uv sync --extra stable`)
 
 ## Project Structure
 ```
@@ -117,6 +119,7 @@ whisper-subtitle-cli/
 ## Dependencies
 - openai-whisper
 - mlx-whisper (optional, Apple Silicon)
+- stable-ts (optional, better timestamps)
 - ffmpeg-python (Python wrapper)
 - click (for CLI interface)
 - yt-dlp (for downloading videos from URLs)
@@ -172,6 +175,9 @@ uv run python main.py video.mp4 --keep-audio
 
 # Auto-translate after transcription (no prompts)
 uv run python main.py video.mp4 --yes
+
+# Use stable-ts for better timestamp accuracy
+uv run python main.py video.mp4 --stable
 ```
 
 ### YouTube URL Support
@@ -274,6 +280,12 @@ uv sync
 
 # Apple Silicon: install with mlx-whisper for Metal GPU acceleration
 uv sync --extra mlx
+
+# Optional: install stable-ts for better timestamp accuracy
+uv sync --extra stable
+
+# Combine extras (Apple Silicon with stable-ts)
+uv sync --extra mlx --extra stable
 ```
 
 ## Testing
