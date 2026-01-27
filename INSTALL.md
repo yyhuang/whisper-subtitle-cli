@@ -284,12 +284,20 @@ uv sync --extra mlx --extra stable
 
 # Use with --stable flag
 uv run python main.py video.mp4 --stable
+
+# Add VAD to reduce hallucinations in silent sections
+uv run python main.py video.mp4 --stable --vad
 ```
 
 When to use `--stable`:
 - Subtitles are slightly out of sync with audio
 - You need precise timestamps for professional use
 - Standard Whisper timestamps are not accurate enough
+
+When to add `--vad`:
+- Whisper generates text during silent sections (hallucinations)
+- Audio has long pauses or background noise
+- Uses Silero VAD (neural network based) for accurate speech detection
 
 ### About Whisper Models (for Transcription)
 

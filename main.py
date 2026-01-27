@@ -556,7 +556,13 @@ def run_system_check():
     default=False,
     help='Use stable-ts for better timestamp accuracy (requires: uv sync --extra stable)'
 )
-def main(data_input, model, language, output, keep_audio, yes, check_system, stable):
+@click.option(
+    '--vad',
+    is_flag=True,
+    default=False,
+    help='Use Voice Activity Detection to reduce hallucinations (requires: --stable)'
+)
+def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad):
     """
     Extract subtitles from DATA_INPUT (file path, URL, or SRT file) using AI transcription.
 
@@ -732,7 +738,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
         else:
             click.echo("      Language: auto-detect")
 
-        transcriber = Transcriber(model_size=model, use_stable=stable)
+        transcriber = Transcriber(model_size=model, use_stable=stable, use_vad=vad)
         click.echo(f"      Device: {transcriber.device} ({transcriber.compute_type})")
         click.echo(f"      Backend: {transcriber.backend}")
         transcribe_start = time.time()

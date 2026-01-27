@@ -34,7 +34,7 @@ uv run python main.py existing.srt
 - **YouTube & URL Support**: Process videos from YouTube, Vimeo, Twitch, and [1000+ platforms](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 - **Subtitle Download**: Automatically download existing YouTube subtitles (much faster than transcription)
 - **AI-Powered Transcription**: Uses OpenAI Whisper for accurate speech-to-text
-- **Better Timestamps**: Optional stable-ts backend for improved subtitle timing (`--stable`)
+- **Better Timestamps**: Optional stable-ts backend for improved subtitle timing (`--stable`, `--vad`)
 - **Subtitle Translation**: Translate subtitles to any language using local Ollama models (no cloud API needed)
 - **Unattended Mode**: Use `--yes` flag to auto-translate after transcription completes
 - **Multiple Languages**: Auto-detects language or accepts manual specification
@@ -89,6 +89,9 @@ uv run python main.py video.mp4 --keep-audio
 
 # Use stable-ts for better timestamp accuracy
 uv run python main.py video.mp4 --stable
+
+# Use VAD to reduce hallucinations (requires --stable)
+uv run python main.py video.mp4 --stable --vad
 
 # YouTube URLs work the same way
 uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
@@ -333,6 +336,7 @@ uv run python main.py --check-system
 - **Slow transcription**: Use `--model tiny` or `--model base`, or specify `--language` to skip auto-detection
 - **Out of memory**: Use a smaller model (see Whisper Model Options above)
 - **Subtitles out of sync**: Use `--stable` flag for better timestamp accuracy (requires `uv sync --extra stable`)
+- **Hallucinations in silence**: Use `--stable --vad` to enable Voice Activity Detection
 - **Translation fails**: Ensure Ollama is running (`ollama serve`) and model is downloaded (`ollama pull translategemma:4b`)
 
 See [INSTALL.md](INSTALL.md#common-issues) for detailed troubleshooting.

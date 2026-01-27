@@ -214,3 +214,34 @@ class TestTranscriberStableTsTranscribe:
             assert seg['start'] == float(i)
             assert seg['end'] == float(i + 1)
             assert seg['text'] == f"Segment {i}"
+
+
+class TestTranscriberVAD:
+    """Tests for VAD (Voice Activity Detection) support."""
+
+    def test_vad_requires_stable_flag(self):
+        """Test that use_vad=True without use_stable raises ValueError."""
+        with pytest.raises(ValueError, match="--vad requires --stable"):
+            Transcriber(use_vad=True, use_stable=False)
+
+    def test_vad_with_stable_works(self):
+        """Test that use_vad=True with use_stable=True works."""
+        try:
+            import stable_whisper  # noqa: F401
+        except ImportError:
+            pytest.skip("stable-ts not installed")
+
+        transcriber = Transcriber(use_stable=True, use_vad=True)
+        assert transcriber.use_vad is True
+        assert transcriber.use_stable is True
+
+    def test_vad_default_is_false(self):
+        """Test that use_vad defaults to False."""
+        transcriber = Transcriber()
+        assert transcriber.use_vad is False
+
+    def test_vad_without_stable_error_message(self):
+        """Test that error message mentions --stable flag."""
+        with pytest.raises(ValueError) as exc_info:
+            Transcriber(use_vad=True)
+        assert "--stable" in str(exc_info.value)

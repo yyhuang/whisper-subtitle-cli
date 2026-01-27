@@ -88,6 +88,7 @@ Settings are configured in `config.json` at the project root.
 - `--yes`, `-y`: Auto-accept translation prompts with defaults
 - `--check-system`: Display system diagnostics (GPU, CUDA, ffmpeg, Ollama)
 - `--stable`: Use stable-ts for better timestamp accuracy (requires: `uv sync --extra stable`)
+- `--vad`: Use Voice Activity Detection to reduce hallucinations (requires: `--stable`)
 
 ## Project Structure
 ```
@@ -178,6 +179,9 @@ uv run python main.py video.mp4 --yes
 
 # Use stable-ts for better timestamp accuracy
 uv run python main.py video.mp4 --stable
+
+# Use VAD to reduce hallucinations (requires --stable)
+uv run python main.py video.mp4 --stable --vad
 ```
 
 ### YouTube URL Support
