@@ -12,6 +12,7 @@ Extract subtitles from video files or YouTube URLs using AI transcription (OpenA
 # Install dependencies
 uv sync                   # CPU/CUDA
 uv sync --extra mlx       # Apple Silicon (Metal GPU)
+uv sync --extra stable    # Better timestamp accuracy (optional)
 
 # Check your system (GPU, CUDA, ffmpeg, Ollama)
 uv run python main.py --check-system
@@ -33,6 +34,7 @@ uv run python main.py existing.srt
 - **YouTube & URL Support**: Process videos from YouTube, Vimeo, Twitch, and [1000+ platforms](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 - **Subtitle Download**: Automatically download existing YouTube subtitles (much faster than transcription)
 - **AI-Powered Transcription**: Uses OpenAI Whisper for accurate speech-to-text
+- **Better Timestamps**: Optional stable-ts backend for improved subtitle timing (`--stable`)
 - **Subtitle Translation**: Translate subtitles to any language using local Ollama models (no cloud API needed)
 - **Unattended Mode**: Use `--yes` flag to auto-translate after transcription completes
 - **Multiple Languages**: Auto-detects language or accepts manual specification
@@ -84,6 +86,9 @@ uv run python main.py video.mp4 --output ./subtitles
 
 # Keep the extracted audio file
 uv run python main.py video.mp4 --keep-audio
+
+# Use stable-ts for better timestamp accuracy
+uv run python main.py video.mp4 --stable
 
 # YouTube URLs work the same way
 uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
@@ -327,6 +332,7 @@ uv run python main.py --check-system
 **Common issues:**
 - **Slow transcription**: Use `--model tiny` or `--model base`, or specify `--language` to skip auto-detection
 - **Out of memory**: Use a smaller model (see Whisper Model Options above)
+- **Subtitles out of sync**: Use `--stable` flag for better timestamp accuracy (requires `uv sync --extra stable`)
 - **Translation fails**: Ensure Ollama is running (`ollama serve`) and model is downloaded (`ollama pull translategemma:4b`)
 
 See [INSTALL.md](INSTALL.md#common-issues) for detailed troubleshooting.
@@ -341,4 +347,5 @@ This project uses:
 
 Built with:
 - [OpenAI Whisper](https://github.com/openai/whisper) - AI speech recognition
+- [stable-ts](https://github.com/jianfch/stable-ts) - Improved timestamp accuracy (optional)
 - [FFmpeg](https://ffmpeg.org/) - Audio/video processing
