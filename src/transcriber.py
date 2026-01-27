@@ -14,25 +14,18 @@ MLX_MODEL_MAP = {
 class Transcriber:
     """Transcribes audio files using openai-whisper, mlx-whisper, or stable-ts."""
 
-    def __init__(self, model_size: str = "medium", use_stable: bool = False, use_vad: bool = False):
+    def __init__(self, model_size: str = "medium", use_stable: bool = False):
         """
         Initialize the transcriber with a Whisper model.
         Automatically detects the best backend and device.
 
         Args:
             model_size: Size of the Whisper model (tiny, base, small, medium, large)
-            use_stable: If True, use stable-ts for better timestamp accuracy
-            use_vad: If True, use VAD (Voice Activity Detection) with stable-ts.
-                     Requires --stable flag. Uses Silero VAD (neural network based).
+            use_stable: If True, use stable-ts for better timestamp accuracy.
+                        Includes Silero VAD to reduce hallucinations.
         """
         self.model_size = model_size
         self.use_stable = use_stable
-        self.use_vad = use_vad
-
-        # VAD requires stable-ts
-        if use_vad and not use_stable:
-            raise ValueError("--vad requires --stable flag. VAD is only supported with stable-ts backend.")
-
         self.backend, self.device, self.compute_type = self._detect_backend()
         self.model = None
 
@@ -162,11 +155,9 @@ class Transcriber:
         """Transcribe using stable-ts (CUDA/CPU)."""
         self._load_model()
 
-        kwargs = {}
+        kwargs = {"vad": True}  # Always use Silero VAD with stable-ts
         if language:
             kwargs["language"] = language
-        if self.use_vad:
-            kwargs["vad"] = True  # Uses Silero VAD
 
         # stable-ts returns a WhisperResult object
         output = self.model.transcribe(audio_path, **kwargs)
@@ -179,11 +170,9 @@ class Transcriber:
 
         model_repo = MLX_MODEL_MAP.get(self.model_size, MLX_MODEL_MAP["medium"])
 
-        kwargs = {}
+        kwargs = {"vad": True}  # Always use Silero VAD with stable-ts
         if language:
             kwargs["language"] = language
-        if self.use_vad:
-            kwargs["vad"] = True  # Uses Silero VAD
 
         # stable-ts MLX uses transcribe_with_path for MLX models
         output = stable_whisper.transcribe_with_path(model_repo, audio_path, **kwargs)
