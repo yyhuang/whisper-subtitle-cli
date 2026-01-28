@@ -87,7 +87,8 @@ Settings are configured in `config.json` at the project root.
 - `--keep-audio`: Keep the extracted audio file (WAV)
 - `--yes`, `-y`: Auto-accept translation prompts with defaults
 - `--check-system`: Display system diagnostics (GPU, CUDA, ffmpeg, Ollama)
-- `--stable`: Use stable-ts for better timestamps and VAD (requires: `uv sync --extra stable`)
+- `--stable`: Use stable-ts for better timestamp accuracy (requires: `uv sync --extra stable`)
+- `--vad`: Enable VAD to reduce hallucinations in silence (requires: `--stable`)
 
 ## Project Structure
 ```
@@ -176,8 +177,11 @@ uv run python main.py video.mp4 --keep-audio
 # Auto-translate after transcription (no prompts)
 uv run python main.py video.mp4 --yes
 
-# Use stable-ts for better timestamps and VAD
+# Use stable-ts for better timestamps
 uv run python main.py video.mp4 --stable
+
+# Add VAD to reduce hallucinations in silence (optional)
+uv run python main.py video.mp4 --stable --vad
 ```
 
 ### YouTube URL Support

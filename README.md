@@ -34,7 +34,7 @@ uv run python main.py existing.srt
 - **YouTube & URL Support**: Process videos from YouTube, Vimeo, Twitch, and [1000+ platforms](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 - **Subtitle Download**: Automatically download existing YouTube subtitles (much faster than transcription)
 - **AI-Powered Transcription**: Uses OpenAI Whisper for accurate speech-to-text
-- **Better Timestamps**: Optional stable-ts backend for improved timing and VAD (`--stable`)
+- **Better Timestamps**: Optional stable-ts backend for improved timing (`--stable`, `--vad`)
 - **Subtitle Translation**: Translate subtitles to any language using local Ollama models (no cloud API needed)
 - **Unattended Mode**: Use `--yes` flag to auto-translate after transcription completes
 - **Multiple Languages**: Auto-detects language or accepts manual specification
@@ -87,8 +87,11 @@ uv run python main.py video.mp4 --output ./subtitles
 # Keep the extracted audio file
 uv run python main.py video.mp4 --keep-audio
 
-# Use stable-ts for better timestamps and VAD
+# Use stable-ts for better timestamps
 uv run python main.py video.mp4 --stable
+
+# Add VAD to reduce hallucinations in silence (optional)
+uv run python main.py video.mp4 --stable --vad
 
 # YouTube URLs work the same way
 uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
@@ -333,7 +336,7 @@ uv run python main.py --check-system
 - **Slow transcription**: Use `--model tiny` or `--model base`, or specify `--language` to skip auto-detection
 - **Out of memory**: Use a smaller model (see Whisper Model Options above)
 - **Subtitles out of sync**: Use `--stable` flag for better timestamps (requires `uv sync --extra stable`)
-- **Hallucinations in silence**: Use `--stable` flag which includes VAD (Voice Activity Detection)
+- **Hallucinations in silence**: Add `--vad` flag with `--stable` to enable Voice Activity Detection
 - **Translation fails**: Ensure Ollama is running (`ollama serve`) and model is downloaded (`ollama pull translategemma:4b`)
 
 See [INSTALL.md](INSTALL.md#common-issues) for detailed troubleshooting.

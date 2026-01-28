@@ -219,13 +219,29 @@ class TestTranscriberStableTsTranscribe:
 class TestTranscriberVAD:
     """Tests for VAD (Voice Activity Detection) support."""
 
-    def test_stable_includes_vad_by_default(self):
-        """Test that stable-ts always uses VAD."""
+    def test_vad_requires_stable(self):
+        """Test that --vad requires --stable."""
+        with pytest.raises(ValueError, match="--vad requires --stable"):
+            Transcriber(use_vad=True, use_stable=False)
+
+    def test_vad_with_stable_works(self):
+        """Test that --vad with --stable works."""
         try:
             import stable_whisper  # noqa: F401
         except ImportError:
             pytest.skip("stable-ts not installed")
 
-        transcriber = Transcriber(use_stable=True)
+        transcriber = Transcriber(use_stable=True, use_vad=True)
         assert transcriber.use_stable is True
-        # VAD is always enabled with stable-ts (no separate flag needed)
+        assert transcriber.use_vad is True
+
+    def test_stable_without_vad_works(self):
+        """Test that --stable without --vad works (VAD off by default)."""
+        try:
+            import stable_whisper  # noqa: F401
+        except ImportError:
+            pytest.skip("stable-ts not installed")
+
+        transcriber = Transcriber(use_stable=True, use_vad=False)
+        assert transcriber.use_stable is True
+        assert transcriber.use_vad is False
