@@ -11,7 +11,7 @@ dependencies = [
     "openai-whisper>=20231117",
     "ffmpeg-python>=0.2.0",
     "click>=8.1.7",
-    "yt-dlp>=2024.1.0",
+    "yt-dlp>=2026.1.31",
     "requests>=2.32.5",
 ]
 
