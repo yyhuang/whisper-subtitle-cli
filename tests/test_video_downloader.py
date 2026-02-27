@@ -266,3 +266,56 @@ class TestVideoDownloader:
         # Invalid URLs (not URL format)
         assert downloader.is_supported_url("not-a-url") is False
         assert downloader.is_supported_url("/path/to/file.mp4") is False
+
+
+class TestCleanLanguageCode:
+    """Tests for _clean_language_code() helper."""
+
+    def setup_method(self):
+        self.downloader = VideoDownloader()
+
+    def test_plain_language_code_unchanged(self):
+        """Simple codes like 'en' should pass through unchanged."""
+        assert self.downloader._clean_language_code('en') == 'en'
+        assert self.downloader._clean_language_code('zh') == 'zh'
+        assert self.downloader._clean_language_code('ja') == 'ja'
+
+    def test_strips_yt_dlp_hash_suffix(self):
+        """Dirty codes from yt-dlp should have their hash stripped."""
+        assert self.downloader._clean_language_code('en-nP7-2PuUl7o') == 'en'
+        assert self.downloader._clean_language_code('ja-p4xb9ptA1GQ') == 'ja'
+
+    def test_preserves_valid_region_subtag(self):
+        """Region codes like 419 (Latin America) should be preserved."""
+        assert self.downloader._clean_language_code('es-419-XTK0TJgvC-M') == 'es-419'
+
+    def test_preserves_script_subtag(self):
+        """Script codes like Hans/Hant should be preserved (no digits)."""
+        assert self.downloader._clean_language_code('zh-Hans') == 'zh-Hans'
+        assert self.downloader._clean_language_code('zh-Hant') == 'zh-Hant'
+
+    def test_preserves_region_code(self):
+        """Standard region codes (uppercase 2-letter) should be preserved."""
+        assert self.downloader._clean_language_code('zh-TW') == 'zh-TW'
+        assert self.downloader._clean_language_code('pt-BR') == 'pt-BR'
+
+
+class TestGetLanguageNameWithDirtyCodes:
+    """Tests for _get_language_name() with yt-dlp dirty codes."""
+
+    def setup_method(self):
+        self.downloader = VideoDownloader()
+
+    def test_dirty_code_returns_correct_name(self):
+        """Dirty yt-dlp codes should resolve to correct language names."""
+        assert self.downloader._get_language_name('en-nP7-2PuUl7o') == 'English'
+        assert self.downloader._get_language_name('ja-p4xb9ptA1GQ') == 'Japanese'
+
+    def test_dirty_code_with_region_returns_correct_name(self):
+        """Dirty code with valid region subtag should resolve correctly."""
+        assert self.downloader._get_language_name('es-419-XTK0TJgvC-M') == 'Spanish'
+
+    def test_plain_code_still_works(self):
+        """Clean codes should still work correctly."""
+        assert self.downloader._get_language_name('en') == 'English'
+        assert self.downloader._get_language_name('zh') == 'Chinese'

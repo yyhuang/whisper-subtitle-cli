@@ -238,12 +238,39 @@ class VideoDownloader:
         except Exception as e:
             raise Exception(f"Failed to get video info: {str(e)}")
 
+    def _clean_language_code(self, lang_code: str) -> str:
+        """
+        Extract base language code by removing yt-dlp hash suffixes.
+
+        yt-dlp sometimes appends video-id hashes to language codes, e.g.:
+          'en-nP7-2PuUl7o'     -> 'en'
+          'es-419-XTK0TJgvC-M' -> 'es-419'
+          'ja-p4xb9ptA1GQ'     -> 'ja'
+          'zh-Hans'            -> 'zh-Hans'  (valid script subtag, unchanged)
+
+        A segment is considered a hash if it contains a digit, an uppercase
+        letter, AND a lowercase letter simultaneously (mixed-case alphanumeric).
+        Standard BCP-47 subtags are never all three at once.
+        """
+        parts = lang_code.split('-')
+        clean_parts = []
+        for part in parts:
+            has_digit = any(c.isdigit() for c in part)
+            has_upper = any(c.isupper() for c in part)
+            has_lower = any(c.islower() for c in part)
+            if has_digit and has_upper and has_lower:
+                break  # Hash segment — stop here
+            clean_parts.append(part)
+        return '-'.join(clean_parts) if clean_parts else lang_code
+
     def _get_language_name(self, lang_code: str) -> str:
         """
         Get human-readable language name from language code.
 
+        Handles dirty yt-dlp codes with hash suffixes (e.g. 'en-nP7-2PuUl7o').
+
         Args:
-            lang_code: ISO 639-1 language code
+            lang_code: Language code, possibly with yt-dlp hash suffix
 
         Returns:
             Language name in English
@@ -273,7 +300,12 @@ class VideoDownloader:
             'fi': 'Finnish',
         }
 
-        return language_names.get(lang_code, lang_code.upper())
+        clean_code = self._clean_language_code(lang_code)
+        # Try exact match on cleaned code, then fall back to base language
+        if clean_code in language_names:
+            return language_names[clean_code]
+        base = clean_code.split('-')[0]
+        return language_names.get(base, clean_code.upper())
 
     @staticmethod
     def sanitize_filename(title: str, max_length: int = 200) -> str:

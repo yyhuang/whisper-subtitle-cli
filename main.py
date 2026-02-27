@@ -754,8 +754,13 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
 
                         click.echo(f"✓ Subtitle downloaded: {srt_path}")
 
+                        # Derive translation source from the downloaded subtitle's language,
+                        # not from --language (which is for Whisper transcription).
+                        parsed_sub_lang = parse_language(selected_name)
+                        download_language_name = parsed_sub_lang[0] if parsed_sub_lang else selected_name
+
                         # Offer translation
-                        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
+                        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=download_language_name)
 
                         click.echo("\n✅ Done! Subtitle download complete.")
                         click.echo(f"\nOutput files saved to:")

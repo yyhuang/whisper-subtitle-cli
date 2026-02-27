@@ -414,3 +414,63 @@ class TestPreviewFlag:
 
         assert result.exit_code == 0
         assert '--subtitle 0' in result.output
+
+
+class TestSubtitleDownloadTranslationSourceLanguage:
+    """Test that downloaded subtitle's language is used for translation, not --language."""
+
+    @patch('main.translate_subtitles')
+    @patch('main.VideoDownloader')
+    @patch('main.SubtitleWriter')
+    def test_subtitle_download_uses_subtitle_lang_not_flag_lang(
+        self, mock_writer, mock_downloader, mock_translate
+    ):
+        """--subtitle 1 --language zh --yes should use English (not Chinese) as translation source."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_downloader_instance = MagicMock()
+            mock_downloader.return_value = mock_downloader_instance
+            mock_downloader_instance.get_available_subtitles.return_value = {
+                'en': {'name': 'English'},
+            }
+            mock_downloader_instance.get_video_info.return_value = {
+                'video_id': 'abc123',
+                'title': 'Test Video',
+                'duration': 60.0,
+                'platform': 'youtube',
+                'upload_date': '20200101',
+            }
+
+            def create_srt(url, lang, path):
+                Path(path).write_text("1\n00:00:00,000 --> 00:00:01,000\nHello\n")
+                return path
+
+            mock_downloader_instance.download_subtitle.side_effect = create_srt
+
+            mock_writer_instance = MagicMock()
+            mock_writer_instance.parse_srt.return_value = [
+                {'start': 0.0, 'end': 1.0, 'text': 'Hello'}
+            ]
+            mock_writer.return_value = mock_writer_instance
+
+            mock_translate.return_value = None
+
+            result = runner.invoke(
+                main.main,
+                [
+                    'https://youtube.com/watch?v=abc123',
+                    '--subtitle', '1',
+                    '--language', 'zh',
+                    '--yes',
+                    '--output', tmpdir,
+                ],
+            )
+
+            assert result.exit_code == 0, result.output
+            # translate_subtitles should be called with language_name='English', not 'Chinese'
+            mock_translate.assert_called_once()
+            call_kwargs = mock_translate.call_args[1]
+            assert call_kwargs.get('language_name') == 'English', (
+                f"Expected language_name='English' but got {call_kwargs.get('language_name')!r}"
+            )

@@ -382,6 +382,11 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - `--preview` — checks subtitles, asks user interactively, outputs the real command to stdout, exits
 - Plan archived at `plan/finished/PLAN-preview-subtitle-flags.md`
 
+### Completed: Fix subtitle language code handling
+- Dirty yt-dlp lang codes (e.g. `en-nP7-2PuUl7o`) now display as `English (en)` instead of garbage
+- `--subtitle N --language zh` now correctly uses the downloaded subtitle's language (e.g. English) as translation source, not the `--language` flag value (meant for Whisper)
+- Plan archived at `plan/finished/PLAN-fix-subtitle-lang-codes.md`
+
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
 - Add progress bars for long videos
