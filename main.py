@@ -545,7 +545,7 @@ def run_system_check():
         click.echo("    → Optional: Install from https://ollama.ai for subtitle translation")
 
 
-@click.command()
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument('data_input', type=DataInput(), required=False)
 @click.option(
     '--model',
@@ -619,6 +619,15 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
       python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
       python main.py video.mp4 --model medium --language en
       python main.py existing.srt
+      python main.py "https://youtube.com/watch?v=ID" --preview
+      python main.py "https://youtube.com/watch?v=ID" --subtitle 1 -y
+
+    \b
+    Batch scripting (two-pass workflow):
+      # Pass 1: interactively pick subtitles, save real commands
+      bash preview_run.sh > real_run.sh
+      # Pass 2: run unattended
+      bash real_run.sh
     """
     # Handle --check-system flag (runs without requiring data_input)
     if check_system:
