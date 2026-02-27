@@ -1,0 +1,416 @@
+"""Tests for --subtitle and --preview CLI flags."""
+import pytest
+from unittest.mock import Mock, patch, MagicMock
+from pathlib import Path
+from click.testing import CliRunner
+import tempfile
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import main
+
+
+class TestSubtitleFlag:
+    """Tests for --subtitle N flag."""
+
+    @patch('main.VideoDownloader')
+    @patch('main.AudioExtractor')
+    @patch('main.Transcriber')
+    @patch('main.SubtitleWriter')
+    def test_subtitle_0_skips_subtitle_check(
+        self, mock_writer, mock_transcriber, mock_extractor, mock_downloader
+    ):
+        """--subtitle 0 should skip subtitle check and go straight to transcription."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_downloader_instance = MagicMock()
+            mock_downloader.return_value = mock_downloader_instance
+            mock_downloader_instance.download.return_value = {
+                'file_path': f'{tmpdir}/abc123.mp4',
+                'title': 'Test Video',
+                'video_id': 'abc123',
+                'duration': 60.0,
+                'platform': 'youtube',
+            }
+            Path(f'{tmpdir}/abc123.mp4').touch()
+
+            mock_extractor_instance = MagicMock()
+            mock_extractor.return_value = mock_extractor_instance
+
+            mock_transcriber_instance = MagicMock()
+            mock_transcriber.return_value = mock_transcriber_instance
+            mock_transcriber_instance.transcribe.return_value = [
+                {'start': 0.0, 'end': 1.0, 'text': 'Test'}
+            ]
+
+            mock_writer.return_value = MagicMock()
+
+            result = runner.invoke(
+                main.main,
+                ['https://youtube.com/watch?v=abc123', '--subtitle', '0', '--output', tmpdir],
+                input='n\n',
+            )
+
+            assert result.exit_code == 0, result.output
+            # Should NOT call get_available_subtitles when --subtitle 0 is given
+            mock_downloader_instance.get_available_subtitles.assert_not_called()
+            # Should still download and transcribe
+            mock_downloader_instance.download.assert_called_once()
+
+    @patch('main.VideoDownloader')
+    @patch('main.SubtitleWriter')
+    def test_subtitle_n_selects_nth_without_prompting(self, mock_writer, mock_downloader):
+        """--subtitle 1 should download the first subtitle without interactive prompt."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_downloader_instance = MagicMock()
+            mock_downloader.return_value = mock_downloader_instance
+            mock_downloader_instance.get_available_subtitles.return_value = {
+                'en': {'name': 'English'},
+                'es': {'name': 'Spanish'},
+            }
+            mock_downloader_instance.get_video_info.return_value = {
+                'video_id': 'abc123',
+                'title': 'Test Video',
+                'duration': 60.0,
+                'platform': 'youtube',
+                'upload_date': '20200101',
+            }
+
+            def create_srt(url, lang, path):
+                Path(path).write_text("1\n00:00:00,000 --> 00:00:01,000\nTest\n")
+                return path
+
+            mock_downloader_instance.download_subtitle.side_effect = create_srt
+
+            mock_writer_instance = MagicMock()
+            mock_writer_instance.parse_srt.return_value = [
+                {'start': 0.0, 'end': 1.0, 'text': 'Test'}
+            ]
+            mock_writer.return_value = mock_writer_instance
+
+            result = runner.invoke(
+                main.main,
+                ['https://youtube.com/watch?v=abc123', '--subtitle', '1', '--output', tmpdir],
+                input='n\n',
+            )
+
+            assert result.exit_code == 0, result.output
+            # Should download English (index 1) without prompting
+            mock_downloader_instance.download_subtitle.assert_called_once()
+            call_args = mock_downloader_instance.download_subtitle.call_args
+            assert call_args[0][1] == 'en'
+
+    @patch('main.VideoDownloader')
+    def test_subtitle_out_of_range_exits_with_error(self, mock_downloader):
+        """--subtitle N where N exceeds available count should exit with code 1."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--subtitle', '5'],
+        )
+
+        assert result.exit_code == 1
+
+    @patch('main.VideoDownloader')
+    def test_subtitle_n_with_no_subtitles_exits_with_error(self, mock_downloader):
+        """--subtitle N (N > 0) when no subtitles available should exit with code 1."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {}
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--subtitle', '1'],
+        )
+
+        assert result.exit_code == 1
+
+    @patch('main.VideoDownloader')
+    @patch('main.SubtitleWriter')
+    def test_subtitle_second_option_selects_correctly(self, mock_writer, mock_downloader):
+        """--subtitle 2 should download the second subtitle (Spanish)."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_downloader_instance = MagicMock()
+            mock_downloader.return_value = mock_downloader_instance
+            mock_downloader_instance.get_available_subtitles.return_value = {
+                'en': {'name': 'English'},
+                'es': {'name': 'Spanish'},
+            }
+            mock_downloader_instance.get_video_info.return_value = {
+                'video_id': 'abc123',
+                'title': 'Test Video',
+                'duration': 60.0,
+                'platform': 'youtube',
+                'upload_date': '20200101',
+            }
+
+            def create_srt(url, lang, path):
+                Path(path).write_text("1\n00:00:00,000 --> 00:00:01,000\nTest\n")
+                return path
+
+            mock_downloader_instance.download_subtitle.side_effect = create_srt
+
+            mock_writer_instance = MagicMock()
+            mock_writer_instance.parse_srt.return_value = [
+                {'start': 0.0, 'end': 1.0, 'text': 'Test'}
+            ]
+            mock_writer.return_value = mock_writer_instance
+
+            result = runner.invoke(
+                main.main,
+                ['https://youtube.com/watch?v=abc123', '--subtitle', '2', '--output', tmpdir],
+                input='n\n',
+            )
+
+            assert result.exit_code == 0, result.output
+            call_args = mock_downloader_instance.download_subtitle.call_args
+            assert call_args[0][1] == 'es'
+
+
+class TestPreviewFlag:
+    """Tests for --preview flag."""
+
+    def _get_command_line(self, output: str) -> str:
+        """Extract the command line from test output (line containing 'main.py')."""
+        for line in output.strip().split('\n'):
+            if 'main.py' in line:
+                return line
+        return ''
+
+    @patch('main.VideoDownloader')
+    def test_preview_outputs_command_to_stdout(self, mock_downloader):
+        """--preview should output the real command with --subtitle N."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        assert '--subtitle 1' in result.output
+
+    @patch('main.VideoDownloader')
+    def test_preview_command_includes_y_flag(self, mock_downloader):
+        """--preview output command should always include -y flag."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0
+        cmd = self._get_command_line(result.output)
+        assert '-y' in cmd
+
+    @patch('main.VideoDownloader')
+    def test_preview_preserves_model_flag(self, mock_downloader):
+        """--preview output command should preserve --model flag when non-default."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview', '--model', 'large'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0
+        cmd = self._get_command_line(result.output)
+        assert '--model large' in cmd
+
+    @patch('main.VideoDownloader')
+    def test_preview_does_not_include_preview_flag_in_output(self, mock_downloader):
+        """--preview output command should NOT include --preview."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0
+        # The generated command line should not contain --preview
+        cmd = self._get_command_line(result.output)
+        assert cmd != '', f"No command line found in output:\n{result.output}"
+        assert '--preview' not in cmd
+
+    def test_preview_with_local_file_outputs_subtitle_0(self):
+        """--preview with local file should output command with --subtitle 0."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = Path(tmpdir) / 'test_video.mp4'
+            video_path.touch()
+
+            result = runner.invoke(
+                main.main,
+                [str(video_path), '--preview'],
+            )
+
+            assert result.exit_code == 0, result.output
+            assert '--subtitle 0' in result.output
+
+    @patch('main.VideoDownloader')
+    def test_preview_exits_without_processing(self, mock_downloader):
+        """--preview should exit without downloading or transcribing the video."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',  # user selects transcribe (0)
+        )
+
+        assert result.exit_code == 0
+        # Should NOT download the video
+        mock_downloader_instance.download.assert_not_called()
+        mock_downloader_instance.download_subtitle.assert_not_called()
+
+    @patch('main.VideoDownloader')
+    def test_preview_with_no_subtitles_outputs_subtitle_0(self, mock_downloader):
+        """--preview with no subtitles available should output command with --subtitle 0."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {}
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert '--subtitle 0' in result.output
+
+    @patch('main.VideoDownloader')
+    def test_preview_includes_url_in_output_command(self, mock_downloader):
+        """--preview output command should include the original URL."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0
+        cmd = self._get_command_line(result.output)
+        assert 'abc123' in cmd
+
+    @patch('main.VideoDownloader')
+    def test_preview_preserves_output_flag(self, mock_downloader):
+        """--preview output command should preserve --output flag if specified."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview', '--output', '/tmp/subs'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0
+        cmd = self._get_command_line(result.output)
+        assert '--output' in cmd
+
+    @patch('main.VideoDownloader')
+    def test_preview_omits_default_model(self, mock_downloader):
+        """--preview output command should NOT include --model when it's the default."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0
+        cmd = self._get_command_line(result.output)
+        assert '--model' not in cmd
+
+    @patch('main.VideoDownloader')
+    def test_preview_user_selects_transcribe(self, mock_downloader):
+        """--preview with user selecting 0 should output command with --subtitle 0."""
+        runner = CliRunner()
+
+        mock_downloader_instance = MagicMock()
+        mock_downloader.return_value = mock_downloader_instance
+        mock_downloader_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+            'fr': {'name': 'French'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
+        )
+
+        assert result.exit_code == 0
+        assert '--subtitle 0' in result.output

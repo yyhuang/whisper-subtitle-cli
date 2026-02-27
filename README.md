@@ -37,6 +37,7 @@ uv run python main.py existing.srt
 - **Better Timestamps**: Optional stable-ts backend for improved timing (`--stable`, `--vad`)
 - **Subtitle Translation**: Translate subtitles to any language using local Ollama models (no cloud API needed)
 - **Unattended Mode**: Use `--yes` flag to auto-translate after transcription completes
+- **Batch Scripting**: Use `--preview` + `--subtitle N` to automate subtitle selection across many URLs
 - **Multiple Languages**: Auto-detects language or accepts manual specification
 - **Flexible Models**: Choose from 5 Whisper model sizes balancing speed vs accuracy
 
@@ -92,6 +93,13 @@ uv run python main.py video.mp4 --stable
 
 # Add VAD to reduce hallucinations in silence (optional)
 uv run python main.py video.mp4 --stable --vad
+
+# Skip subtitle prompt: pre-select by index (0=transcribe, 1+=download that subtitle)
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --subtitle 1
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --subtitle 0  # force transcribe
+
+# Preview mode: check subtitles, ask user, print the real command, then exit
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview
 
 # YouTube URLs work the same way
 uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
@@ -153,6 +161,7 @@ Downloading English subtitle...
 - 🎯 **Smart filtering**: Only shows manual subtitles (auto-generated are hidden)
 - 🔄 **Automatic fallback**: If no subtitles exist, automatically transcribes
 - 🎛️ **User choice**: Select option 0 to transcribe even when subtitles available
+- 🤖 **Automation-friendly**: Use `--subtitle N` to pre-select, `--preview` for batch scripts (see [Batch Scripting](#batch-scripting---preview-and---subtitle))
 
 ### Subtitle Translation (Ollama)
 
@@ -276,6 +285,60 @@ uv run python main.py "https://youtube.com/..." --language en --yes
 #
 # (after you choose, auto-translates without further prompts)
 ```
+
+### Batch Scripting (`--preview` and `--subtitle`)
+
+When processing many URLs in a script, the subtitle selection prompt blocks automation. Use `--preview` and `--subtitle` to handle this in two passes.
+
+**`--subtitle N`** — Pre-select subtitle by index, skipping the interactive prompt:
+
+```bash
+# Download the first subtitle (index 1) without any prompt
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --subtitle 1 -y
+
+# Force transcription, skipping the subtitle check entirely
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --subtitle 0 -y
+```
+
+**`--preview`** — Check subtitles interactively, then output the ready-to-run command to stdout and exit:
+
+```bash
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview
+
+# Output (to stdout):
+uv run python main.py 'https://youtube.com/watch?v=VIDEO_ID' --subtitle 1 -y
+
+# Informational messages (to stderr):
+# Detected URL: ...
+# Available subtitles:
+#   1. English (en)
+#   0. Transcribe video instead
+# Which subtitle would you like to download? [0]:
+```
+
+**Two-pass workflow** for a batch of URLs:
+
+```bash
+# preview_run.sh — one URL per line
+uv run python main.py "https://youtube.com/watch?v=AAA" --preview --model large
+uv run python main.py "https://youtube.com/watch?v=BBB" --preview
+uv run python main.py "https://youtube.com/watch?v=CCC" --preview --output ./subs
+```
+
+```bash
+# Pass 1: interactive — user picks subtitle for each URL, real commands are saved
+bash preview_run.sh > real_run.sh
+
+# Pass 2: unattended — all commands run without prompts
+bash real_run.sh
+```
+
+Notes:
+- `--preview` always adds `-y` to the output command (for unattended translation)
+- `--preview` never includes `--preview` in the output command
+- Non-default flags (`--model`, `--language`, `--output`, `--keep-audio`, `--stable`, `--vad`) are preserved
+- Informational output goes to **stderr**; only the command goes to **stdout** (enables clean piping)
+- For local files and SRT inputs, `--preview` outputs the command with `--subtitle 0`
 
 ## Output Format
 

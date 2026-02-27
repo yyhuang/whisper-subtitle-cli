@@ -67,6 +67,39 @@ def is_srt_file(path: str) -> bool:
     return path.lower().endswith('.srt')
 
 
+def _build_preview_command(
+    data_input: str,
+    subtitle_choice: int,
+    model: str,
+    language: str | None,
+    output: str | None,
+    keep_audio: bool,
+    stable: bool,
+    vad: bool,
+) -> str:
+    """Build the real command for --preview mode output."""
+    import shlex
+
+    parts = ['uv run python main.py', shlex.quote(data_input)]
+    parts.append(f'--subtitle {subtitle_choice}')
+    parts.append('-y')
+
+    if model != 'medium':
+        parts.append(f'--model {model}')
+    if language is not None:
+        parts.append(f'--language {language}')
+    if output is not None:
+        parts.append(f'--output {shlex.quote(output)}')
+    if keep_audio:
+        parts.append('--keep-audio')
+    if stable:
+        parts.append('--stable')
+    if vad:
+        parts.append('--vad')
+
+    return ' '.join(parts)
+
+
 def get_output_directory(cli_output: str, config: dict, default_path: Path) -> Path:
     """
     Determine output directory with priority: CLI argument > config > default.
@@ -562,7 +595,19 @@ def run_system_check():
     default=False,
     help='Enable VAD to reduce hallucinations in silence (requires: --stable)'
 )
-def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad):
+@click.option(
+    '--subtitle',
+    type=int,
+    default=None,
+    help='Pre-select subtitle by index (0=transcribe, 1+=download that subtitle). Skips interactive prompt.'
+)
+@click.option(
+    '--preview',
+    is_flag=True,
+    default=False,
+    help='Check subtitles, prompt user, output the real command with --subtitle N to stdout, then exit.'
+)
+def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad, subtitle, preview):
     """
     Extract subtitles from DATA_INPUT (file path, URL, or SRT file) using AI transcription.
 
@@ -605,6 +650,10 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
 
         # Handle SRT file input - skip to translation
         if is_srt_file(data_input):
+            if preview:
+                cmd = _build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad)
+                click.echo(cmd)
+                return
             handle_srt_translation(data_input, output, config, yes=yes, language_name=language_name)
             return
 
@@ -614,78 +663,122 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
 
         if is_url(data_input):
             is_url_input = True
-            click.echo(f"Detected URL: {data_input}")
+            click.echo(f"Detected URL: {data_input}", err=preview)
 
-            # Check for available subtitles first
-            click.echo("\nChecking for available subtitles...")
             downloader = VideoDownloader()  # Uses system temp directory by default
             temp_dir_path = downloader.download_dir
 
-            subtitles = downloader.get_available_subtitles(data_input)
+            # When --subtitle 0 is given, skip the subtitle check entirely
+            skip_subtitle_check = (subtitle is not None and subtitle == 0)
+            subtitles_checked = False
+            subtitles: dict = {}
 
-            if subtitles:
-                # List available subtitles
-                click.echo("\nAvailable subtitles:")
+            if not skip_subtitle_check:
+                # Check for available subtitles first
+                click.echo("\nChecking for available subtitles...", err=preview)
+                subtitles = downloader.get_available_subtitles(data_input)
+                subtitles_checked = True
                 subtitle_list = list(subtitles.items())
-                for idx, (lang_code, info) in enumerate(subtitle_list, 1):
-                    click.echo(f"  {idx}. {info['name']} ({lang_code})")
-                click.echo(f"  0. Transcribe video instead")
 
-                # Always prompt for subtitle selection regardless of --yes flag.
-                # This is a fast operation (~1 sec) and the user is still at the terminal.
-                # --yes only affects the translation prompts after transcription.
-                choice = click.prompt(
-                    "\nWhich subtitle would you like to download?",
-                    type=click.IntRange(0, len(subtitle_list)),
-                    default=0
-                )
+                if subtitles:
+                    click.echo("\nAvailable subtitles:", err=preview)
+                    for idx, (lang_code, info) in enumerate(subtitle_list, 1):
+                        click.echo(f"  {idx}. {info['name']} ({lang_code})", err=preview)
+                    click.echo(f"  0. Transcribe video instead", err=preview)
 
-                if choice > 0:
-                    # Download selected subtitle
-                    selected_lang = subtitle_list[choice - 1][0]
-                    selected_name = subtitle_list[choice - 1][1]['name']
+                    if preview:
+                        # Prompt goes to stderr so only the command reaches stdout
+                        choice = click.prompt(
+                            "\nWhich subtitle would you like to download?",
+                            type=click.IntRange(0, len(subtitle_list)),
+                            default=0,
+                            err=True,
+                        )
+                        cmd = _build_preview_command(data_input, choice, model, language, output, keep_audio, stable, vad)
+                        click.echo(cmd)
+                        return
+                    elif subtitle is not None:
+                        # --subtitle N: validate then select without prompting
+                        if subtitle > len(subtitle_list):
+                            click.echo(
+                                f"❌ Error: --subtitle {subtitle} is out of range. "
+                                f"Only {len(subtitle_list)} subtitle(s) available (or use 0 to transcribe).",
+                                err=True,
+                            )
+                            sys.exit(1)
+                        choice = subtitle
+                    else:
+                        # Normal interactive prompt
+                        # Always prompt regardless of --yes (this is fast, user is at terminal)
+                        # --yes only affects translation prompts after transcription.
+                        choice = click.prompt(
+                            "\nWhich subtitle would you like to download?",
+                            type=click.IntRange(0, len(subtitle_list)),
+                            default=0,
+                        )
 
-                    click.echo(f"\nDownloading {selected_name} subtitle...")
+                    if choice > 0:
+                        # Download selected subtitle
+                        selected_lang = subtitle_list[choice - 1][0]
+                        selected_name = subtitle_list[choice - 1][1]['name']
 
-                    # Get video ID for output naming
-                    video_info = downloader.get_video_info(data_input)
-                    base_name = video_info['video_id']
+                        click.echo(f"\nDownloading {selected_name} subtitle...")
 
-                    # Get date prefix from video upload date
-                    date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
+                        # Get video ID for output naming
+                        video_info = downloader.get_video_info(data_input)
+                        base_name = video_info['video_id']
 
-                    # Determine output directory (priority: CLI > config > cwd)
-                    output_dir = get_output_directory(output, config, Path.cwd())
+                        # Get date prefix from video upload date
+                        date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
 
-                    srt_path = output_dir / f"{date_prefix}_{base_name}.srt"
+                        # Determine output directory (priority: CLI > config > cwd)
+                        output_dir = get_output_directory(output, config, Path.cwd())
 
-                    # Download subtitle
-                    downloader.download_subtitle(data_input, selected_lang, str(srt_path))
+                        srt_path = output_dir / f"{date_prefix}_{base_name}.srt"
 
-                    # Parse the downloaded SRT for translation
-                    writer = SubtitleWriter()
-                    segments = writer.parse_srt(str(srt_path))
+                        # Download subtitle
+                        downloader.download_subtitle(data_input, selected_lang, str(srt_path))
 
-                    click.echo(f"✓ Subtitle downloaded: {srt_path}")
+                        # Parse the downloaded SRT for translation
+                        writer = SubtitleWriter()
+                        segments = writer.parse_srt(str(srt_path))
 
-                    # Offer translation
-                    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
+                        click.echo(f"✓ Subtitle downloaded: {srt_path}")
 
-                    click.echo("\n✅ Done! Subtitle download complete.")
-                    click.echo(f"\nOutput files saved to:")
-                    click.echo(f"  {output_dir}")
+                        # Offer translation
+                        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
 
-                    # Display timing summary
-                    if translation_time is not None:
-                        click.echo(f"\n⏱ Time spent:")
-                        click.echo(f"  Translation: {translation_time:.1f}s")
+                        click.echo("\n✅ Done! Subtitle download complete.")
+                        click.echo(f"\nOutput files saved to:")
+                        click.echo(f"  {output_dir}")
 
-                    return  # Exit early, skip transcription
+                        # Display timing summary
+                        if translation_time is not None:
+                            click.echo(f"\n⏱ Time spent:")
+                            click.echo(f"  Translation: {translation_time:.1f}s")
 
-            # No subtitles or user chose to transcribe
-            if not subtitles:
+                        return  # Exit early, skip transcription
+
+                    # choice == 0: fall through to transcription
+
+                else:
+                    # No subtitles available
+                    if preview:
+                        cmd = _build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad)
+                        click.echo(cmd)
+                        return
+                    elif subtitle is not None and subtitle > 0:
+                        click.echo(
+                            f"❌ Error: No subtitles available for this URL. "
+                            f"Use --subtitle 0 to transcribe instead.",
+                            err=True,
+                        )
+                        sys.exit(1)
+
+            # No subtitles or user chose to transcribe — proceed to video download
+            if subtitles_checked and not subtitles:
                 click.echo("No manual subtitles available. Transcribing video...")
-            else:
+            elif subtitles_checked and subtitles:
                 click.echo("\nProceeding with video transcription...")
 
             click.echo("\n[0/4] Downloading video...")
@@ -712,6 +805,11 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
             date_prefix = get_date_prefix(file_path=video_path)
 
             click.echo(f"Processing: {video_path.name}")
+
+            if preview:
+                cmd = _build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad)
+                click.echo(cmd)
+                return
 
         # Determine output directory (priority: CLI > config > default)
         # Default: video's directory for local files, cwd for URL downloads

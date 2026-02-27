@@ -375,7 +375,14 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Most users with reasonably recent NVIDIA drivers should have this
 - Provides good balance between compatibility and performance
 
-## Next Steps (Optional Enhancements)
+## Next Steps
+
+### Completed: `--preview` and `--subtitle` flags for batch script automation
+- `--subtitle N` — pre-select subtitle by index (0=transcribe, 1+=download), skips interactive prompt
+- `--preview` — checks subtitles, asks user interactively, outputs the real command to stdout, exits
+- Plan archived at `plan/finished/PLAN-preview-subtitle-flags.md`
+
+### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
 - Add progress bars for long videos
 - Support for additional subtitle formats (VTT, ASS)
