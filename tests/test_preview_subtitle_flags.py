@@ -489,7 +489,26 @@ class TestSubtitleDownloadTranslationSourceLanguage:
 
 
 class TestPreviewTwoPhaseWorkflow:
-    """Tests for two-phase preview: separate transcribe + translate commands (VRAM constraint)."""
+    """Tests for two-phase preview: separate transcribe + translate commands (VRAM constraint).
+
+    All tests in this class run with auto_unload=True to verify two-phase behavior.
+    """
+
+    @pytest.fixture(autouse=True)
+    def enable_auto_unload(self):
+        """Patch load_config with auto_unload=True for all tests in this class."""
+        config = {
+            'ollama': {
+                'model': 'translategemma:4b',
+                'base_url': 'http://localhost:11434',
+                'batch_size': 50,
+                'keep_alive': '10m',
+                'auto_unload': True,
+            },
+            'output': {'directory': None},
+        }
+        with patch('main.load_config', return_value=config):
+            yield
 
     def _get_cmd_lines(self, output: str) -> list[str]:
         """Extract all command lines from test output."""
@@ -711,3 +730,88 @@ class TestPreviewTwoPhaseWorkflow:
         cmds = self._get_cmd_lines(result.output)
         assert '--language en' in cmds[0]
         assert '--language en' in cmds[1]
+
+
+class TestPreviewSingleCommandWhenAutoUnloadDisabled:
+    """When auto_unload=False (default), --preview outputs a single command for transcription paths."""
+
+    def _get_cmd_lines(self, output: str) -> list[str]:
+        return [l for l in output.strip().split('\n') if 'main.py' in l]
+
+    def _make_config(self, auto_unload: bool = False) -> dict:
+        return {
+            'ollama': {
+                'model': 'translategemma:4b',
+                'base_url': 'http://localhost:11434',
+                'batch_size': 50,
+                'keep_alive': '10m',
+                'auto_unload': auto_unload,
+            },
+            'output': {'directory': None},
+        }
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_url_no_subtitles_single_command(self, mock_downloader, mock_config):
+        """URL with no subtitles, auto_unload=False → single command with --subtitle 0 -y."""
+        mock_config.return_value = self._make_config(auto_unload=False)
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = {}
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+        )
+
+        assert result.exit_code == 0, result.output
+        cmds = self._get_cmd_lines(result.output)
+        assert len(cmds) == 1
+        assert '--subtitle 0' in cmds[0]
+        assert '-y' in cmds[0]
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_url_subtitles_user_picks_0_single_command(self, mock_downloader, mock_config):
+        """URL with subtitles, user picks 0, auto_unload=False → single command."""
+        mock_config.return_value = self._make_config(auto_unload=False)
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = {'en': {'name': 'English'}}
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        cmds = self._get_cmd_lines(result.output)
+        assert len(cmds) == 1
+        assert '--subtitle 0' in cmds[0]
+        assert '-y' in cmds[0]
+
+    @patch('main.load_config')
+    def test_local_file_single_command(self, mock_config):
+        """Local file, auto_unload=False → single command with --subtitle 0 -y."""
+        mock_config.return_value = self._make_config(auto_unload=False)
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = Path(tmpdir) / 'test_video.mp4'
+            video_path.touch()
+
+            result = runner.invoke(
+                main.main,
+                [str(video_path), '--preview'],
+            )
+
+            assert result.exit_code == 0, result.output
+            cmds = self._get_cmd_lines(result.output)
+            assert len(cmds) == 1
+            assert '--subtitle 0' in cmds[0]
+            assert '-y' in cmds[0]

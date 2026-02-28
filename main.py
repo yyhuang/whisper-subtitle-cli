@@ -753,14 +753,17 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                             err=True,
                         )
                         if choice == 0:
-                            # Two-phase: transcribe first, translate separately (VRAM constraint)
-                            video_info = downloader.get_video_info(data_input)
-                            video_id = video_info['video_id']
-                            date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
-                            output_dir = get_output_directory(output, config, Path.cwd())
-                            srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
-                            click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
-                            click.echo(_build_translate_command(srt_path, output, language))
+                            if config['ollama'].get('auto_unload', False):
+                                # Two-phase: transcribe first, translate separately (VRAM constraint)
+                                video_info = downloader.get_video_info(data_input)
+                                video_id = video_info['video_id']
+                                date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
+                                output_dir = get_output_directory(output, config, Path.cwd())
+                                srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
+                                click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
+                                click.echo(_build_translate_command(srt_path, output, language))
+                            else:
+                                click.echo(_build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad))
                         else:
                             cmd = _build_preview_command(data_input, choice, model, language, output, keep_audio, stable, vad)
                             click.echo(cmd)
@@ -837,14 +840,17 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                 else:
                     # No subtitles available
                     if preview:
-                        # Two-phase: transcribe first, translate separately (VRAM constraint)
-                        video_info = downloader.get_video_info(data_input)
-                        video_id = video_info['video_id']
-                        date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
-                        output_dir = get_output_directory(output, config, Path.cwd())
-                        srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
-                        click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
-                        click.echo(_build_translate_command(srt_path, output, language))
+                        if config['ollama'].get('auto_unload', False):
+                            # Two-phase: transcribe first, translate separately (VRAM constraint)
+                            video_info = downloader.get_video_info(data_input)
+                            video_id = video_info['video_id']
+                            date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
+                            output_dir = get_output_directory(output, config, Path.cwd())
+                            srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
+                            click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
+                            click.echo(_build_translate_command(srt_path, output, language))
+                        else:
+                            click.echo(_build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad))
                         return
                     elif subtitle is not None and subtitle > 0:
                         click.echo(
@@ -886,11 +892,14 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
             click.echo(f"Processing: {video_path.name}")
 
             if preview:
-                # Two-phase: transcribe first, translate separately (VRAM constraint)
-                output_dir = get_output_directory(output, config, video_path.parent)
-                srt_path = str(output_dir / f"{date_prefix}_{base_name}.srt")
-                click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
-                click.echo(_build_translate_command(srt_path, output, language))
+                if config['ollama'].get('auto_unload', False):
+                    # Two-phase: transcribe first, translate separately (VRAM constraint)
+                    output_dir = get_output_directory(output, config, video_path.parent)
+                    srt_path = str(output_dir / f"{date_prefix}_{base_name}.srt")
+                    click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
+                    click.echo(_build_translate_command(srt_path, output, language))
+                else:
+                    click.echo(_build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad))
                 return
 
         # Determine output directory (priority: CLI > config > default)
@@ -918,9 +927,10 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
         else:
             click.echo("      Language: auto-detect")
 
-        n_unloaded = unload_all_models(config['ollama']['base_url'])
-        if n_unloaded:
-            click.echo(f"  Unloading {n_unloaded} Ollama model(s) to free VRAM...")
+        if config['ollama'].get('auto_unload', False):
+            n_unloaded = unload_all_models(config['ollama']['base_url'])
+            if n_unloaded:
+                click.echo(f"  Unloading {n_unloaded} Ollama model(s) to free VRAM...")
 
         transcriber = Transcriber(model_size=model, use_stable=stable, use_vad=vad)
         click.echo(f"      Device: {transcriber.device} ({transcriber.compute_type})")

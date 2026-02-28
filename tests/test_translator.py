@@ -148,6 +148,36 @@ class TestLoadConfig:
             assert config['ollama']['base_url'] == 'http://localhost:11434'
             assert config['ollama']['batch_size'] == 25
 
+    def test_load_config_auto_unload_defaults_to_false(self):
+        """auto_unload should default to False when not in config file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'config.json'
+            config_path.write_text(json.dumps({"ollama": {"model": "llama3:8b"}}))
+
+            with patch('src.translator.Path') as mock_path_class:
+                mock_path_instance = MagicMock()
+                mock_path_instance.exists.return_value = True
+                mock_path_class.return_value.parent.parent.__truediv__.return_value = config_path
+
+                config = load_config()
+
+            assert config['ollama']['auto_unload'] is False
+
+    def test_load_config_reads_auto_unload_true(self):
+        """auto_unload: true in config file should be read correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'config.json'
+            config_path.write_text(json.dumps({"ollama": {"auto_unload": True}}))
+
+            with patch('src.translator.Path') as mock_path_class:
+                mock_path_instance = MagicMock()
+                mock_path_instance.exists.return_value = True
+                mock_path_class.return_value.parent.parent.__truediv__.return_value = config_path
+
+                config = load_config()
+
+            assert config['ollama']['auto_unload'] is True
+
 
 class TestOllamaTranslator:
     """Tests for the OllamaTranslator class."""

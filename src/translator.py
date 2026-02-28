@@ -162,7 +162,8 @@ def load_config() -> dict:
             "model": "translategemma:4b",
             "base_url": "http://localhost:11434",
             "batch_size": 50,
-            "keep_alive": "10m"
+            "keep_alive": "10m",
+            "auto_unload": False
         },
         "output": {
             "directory": None  # None means use default locations

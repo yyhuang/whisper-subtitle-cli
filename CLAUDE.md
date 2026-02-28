@@ -55,7 +55,8 @@ Settings are configured in `config.json` at the project root.
     "model": "translategemma:4b",
     "base_url": "http://localhost:11434",
     "batch_size": 50,
-    "keep_alive": "10m"
+    "keep_alive": "10m",
+    "auto_unload": false
   },
   "output": {
     "directory": "/path/to/subtitles"
@@ -77,6 +78,10 @@ Settings are configured in `config.json` at the project root.
   - `"5m"`, `"10m"`, `"1h"` - duration values
   - `"-1"` - keep loaded indefinitely
   - `"0"` - unload immediately after request
+- **auto_unload**: Unload Ollama models before Whisper transcription to free VRAM (default: `false`)
+  - `false` — do nothing; `--preview` outputs a single combined command
+  - `true` — evict all loaded Ollama models before Whisper loads; `--preview` outputs two-phase commands (transcribe first, then translate)
+  - Enable if your GPU doesn't have enough VRAM to run both Ollama and Whisper simultaneously
 
 **Note:** Only Ollama API is supported. Other APIs (OpenAI, Claude, etc.) are not compatible.
 
@@ -397,9 +402,20 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Called automatically in `main.py` just before `Transcriber()` loads Whisper
 - Silent no-op when Ollama is not running or no models loaded; prints message only when models were evicted
 
+### Completed: Make auto_unload configurable (default off)
+- Both auto-unload and two-phase preview are now gated by `ollama.auto_unload` in `config.json`
+- Default is `false` (opt-in) — users with enough VRAM don't need either behavior
+- Set `"auto_unload": true` to restore VRAM-constrained behavior
+- Plan archived at `plan/finished/PLAN-configurable-auto-unload.md`
+
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
 - Add progress bars for long videos
 - Support for additional subtitle formats (VTT, ASS)
 - Playlist support (download and process all videos from a playlist)
 - Web interface
+
+### Next Session
+- No active work in progress. All planned features complete.
+- Pick up from Future enhancements above, or start a new feature.
+- Run `uv run pytest -v` to verify clean state (166 passed, 7 skipped as of last session).

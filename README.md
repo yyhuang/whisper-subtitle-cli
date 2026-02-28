@@ -232,7 +232,8 @@ Edit `config.json` to change settings:
     "model": "translategemma:4b",
     "base_url": "http://localhost:11434",
     "batch_size": 50,
-    "keep_alive": "10m"
+    "keep_alive": "10m",
+    "auto_unload": false
   },
   "output": {
     "directory": "/path/to/subtitles"
@@ -243,6 +244,7 @@ Edit `config.json` to change settings:
 - `ollama.model`: Ollama model for translation
 - `ollama.batch_size`: Segments per API call (higher = better context, more memory)
 - `ollama.keep_alive`: How long model stays loaded (`"10m"`, `"1h"`, `"-1"` for indefinitely)
+- `ollama.auto_unload`: Set to `true` if your GPU doesn't have enough VRAM to run Ollama and Whisper simultaneously. When enabled, Ollama models are evicted before Whisper loads, and `--preview` outputs two separate commands (transcribe first, then translate). Default: `false`.
 - `output.directory`: Default output directory (overrides default, can be overridden by `--output` flag)
 
 **Note:** Translation uses Ollama's local API only. The `base_url` can point to a remote Ollama server, but other APIs (OpenAI, Claude, etc.) are not supported.
