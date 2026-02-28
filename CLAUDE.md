@@ -387,6 +387,11 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - `--subtitle N --language zh` now correctly uses the downloaded subtitle's language (e.g. English) as translation source, not the `--language` flag value (meant for Whisper)
 - Plan archived at `plan/finished/PLAN-fix-subtitle-lang-codes.md`
 
+### Completed: Two-phase preview commands for VRAM-constrained machines
+- `--preview` for transcription paths now outputs TWO commands (Phase 1: transcribe only, Phase 2: translate SRT)
+- Subtitle download paths (choice > 0) keep single-command behavior (no GPU used)
+- Plan archived at `plan/finished/PLAN-two-phase-preview.md`
+
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
 - Add progress bars for long videos

@@ -300,21 +300,24 @@ uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --subtitle 1 -y
 uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --subtitle 0 -y
 ```
 
-**`--preview`** — Check subtitles interactively, then output the ready-to-run command to stdout and exit:
+**`--preview`** — Check subtitles interactively, then output the ready-to-run command(s) to stdout and exit:
 
 ```bash
 uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview
-
-# Output (to stdout):
-uv run python main.py 'https://youtube.com/watch?v=VIDEO_ID' --subtitle 1 -y
-
-# Informational messages (to stderr):
-# Detected URL: ...
-# Available subtitles:
-#   1. English (en)
-#   0. Transcribe video instead
-# Which subtitle would you like to download? [0]:
 ```
+
+When the user **picks a subtitle to download** (no GPU needed), one command is output:
+```
+uv run python main.py 'https://youtube.com/watch?v=VIDEO_ID' --subtitle 1 -y
+```
+
+When the video needs **transcription** (GPU needed for Whisper), two commands are output so you can free VRAM between phases:
+```
+uv run python main.py 'https://youtube.com/watch?v=VIDEO_ID' --subtitle 0
+uv run python main.py '/path/to/20200101_VIDEO_ID.srt' -y
+```
+
+Informational messages (subtitle list, prompt) go to stderr, so only the command(s) reach stdout.
 
 **Two-pass workflow** for a batch of URLs:
 
@@ -329,16 +332,16 @@ uv run python main.py "https://youtube.com/watch?v=CCC" --preview --output ./sub
 # Pass 1: interactive — user picks subtitle for each URL, real commands are saved
 bash preview_run.sh > real_run.sh
 
-# Pass 2: unattended — all commands run without prompts
+# Pass 2: unattended — run all commands without prompts
 bash real_run.sh
 ```
 
 Notes:
-- `--preview` always adds `-y` to the output command (for unattended translation)
-- `--preview` never includes `--preview` in the output command
-- Non-default flags (`--model`, `--language`, `--output`, `--keep-audio`, `--stable`, `--vad`) are preserved
-- Informational output goes to **stderr**; only the command goes to **stdout** (enables clean piping)
-- For local files and SRT inputs, `--preview` outputs the command with `--subtitle 0`
+- Transcription paths output **two commands**: Phase 1 transcribes only (no `-y`), Phase 2 translates the SRT (with `-y`)
+- Subtitle download paths (choice > 0) output **one command** with `-y` (no GPU used)
+- `--preview` never includes `--preview` in the output command(s)
+- Non-default flags (`--model`, `--language`, `--output`, `--keep-audio`, `--stable`, `--vad`) are preserved in both commands
+- Informational output goes to **stderr**; only the command(s) go to **stdout** (enables clean piping)
 
 ## Output Format
 

@@ -77,7 +77,7 @@ def _build_preview_command(
     stable: bool,
     vad: bool,
 ) -> str:
-    """Build the real command for --preview mode output."""
+    """Build the real command for --preview mode output (subtitle download paths)."""
     import shlex
 
     parts = ['uv run python main.py', shlex.quote(data_input)]
@@ -96,6 +96,55 @@ def _build_preview_command(
         parts.append('--stable')
     if vad:
         parts.append('--vad')
+
+    return ' '.join(parts)
+
+
+def _build_transcribe_command(
+    data_input: str,
+    model: str,
+    language: str | None,
+    output: str | None,
+    keep_audio: bool,
+    stable: bool,
+    vad: bool,
+) -> str:
+    """Build Phase 1 transcription command (no -y so translation is not triggered)."""
+    import shlex
+
+    parts = ['uv run python main.py', shlex.quote(data_input)]
+    parts.append('--subtitle 0')
+
+    if model != 'medium':
+        parts.append(f'--model {model}')
+    if language is not None:
+        parts.append(f'--language {language}')
+    if output is not None:
+        parts.append(f'--output {shlex.quote(output)}')
+    if keep_audio:
+        parts.append('--keep-audio')
+    if stable:
+        parts.append('--stable')
+    if vad:
+        parts.append('--vad')
+
+    return ' '.join(parts)
+
+
+def _build_translate_command(
+    srt_path: str,
+    output: str | None,
+    language: str | None,
+) -> str:
+    """Build Phase 2 translation command (SRT file + -y; --language is source language)."""
+    import shlex
+
+    parts = ['uv run python main.py', shlex.quote(srt_path), '-y']
+
+    if language is not None:
+        parts.append(f'--language {language}')
+    if output is not None:
+        parts.append(f'--output {shlex.quote(output)}')
 
     return ' '.join(parts)
 
@@ -696,15 +745,25 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                     click.echo(f"  0. Transcribe video instead", err=preview)
 
                     if preview:
-                        # Prompt goes to stderr so only the command reaches stdout
+                        # Prompt goes to stderr so only the command(s) reach stdout
                         choice = click.prompt(
                             "\nWhich subtitle would you like to download?",
                             type=click.IntRange(0, len(subtitle_list)),
                             default=0,
                             err=True,
                         )
-                        cmd = _build_preview_command(data_input, choice, model, language, output, keep_audio, stable, vad)
-                        click.echo(cmd)
+                        if choice == 0:
+                            # Two-phase: transcribe first, translate separately (VRAM constraint)
+                            video_info = downloader.get_video_info(data_input)
+                            video_id = video_info['video_id']
+                            date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
+                            output_dir = get_output_directory(output, config, Path.cwd())
+                            srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
+                            click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
+                            click.echo(_build_translate_command(srt_path, output, language))
+                        else:
+                            cmd = _build_preview_command(data_input, choice, model, language, output, keep_audio, stable, vad)
+                            click.echo(cmd)
                         return
                     elif subtitle is not None:
                         # --subtitle N: validate then select without prompting
@@ -778,8 +837,14 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                 else:
                     # No subtitles available
                     if preview:
-                        cmd = _build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad)
-                        click.echo(cmd)
+                        # Two-phase: transcribe first, translate separately (VRAM constraint)
+                        video_info = downloader.get_video_info(data_input)
+                        video_id = video_info['video_id']
+                        date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
+                        output_dir = get_output_directory(output, config, Path.cwd())
+                        srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
+                        click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
+                        click.echo(_build_translate_command(srt_path, output, language))
                         return
                     elif subtitle is not None and subtitle > 0:
                         click.echo(
@@ -821,8 +886,11 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
             click.echo(f"Processing: {video_path.name}")
 
             if preview:
-                cmd = _build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad)
-                click.echo(cmd)
+                # Two-phase: transcribe first, translate separately (VRAM constraint)
+                output_dir = get_output_directory(output, config, video_path.parent)
+                srt_path = str(output_dir / f"{date_prefix}_{base_name}.srt")
+                click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
+                click.echo(_build_translate_command(srt_path, output, language))
                 return
 
         # Determine output directory (priority: CLI > config > default)
