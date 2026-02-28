@@ -109,11 +109,12 @@ def _build_transcribe_command(
     stable: bool,
     vad: bool,
 ) -> str:
-    """Build Phase 1 transcription command (no -y so translation is not triggered)."""
+    """Build Phase 1 transcription command (transcribe only, no translation)."""
     import shlex
 
     parts = ['uv run python main.py', shlex.quote(data_input)]
     parts.append('--subtitle 0')
+    parts.append('--action transcribe')
 
     if model != 'medium':
         parts.append(f'--model {model}')
@@ -136,10 +137,10 @@ def _build_translate_command(
     output: str | None,
     language: str | None,
 ) -> str:
-    """Build Phase 2 translation command (SRT file + -y; --language is source language)."""
+    """Build Phase 2 translation command (SRT file + -y + --action translate)."""
     import shlex
 
-    parts = ['uv run python main.py', shlex.quote(srt_path), '-y']
+    parts = ['uv run python main.py', shlex.quote(srt_path), '-y', '--action translate']
 
     if language is not None:
         parts.append(f'--language {language}')
@@ -656,7 +657,13 @@ def run_system_check():
     default=False,
     help='Check subtitles, prompt user, output the real command with --subtitle N to stdout, then exit.'
 )
-def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad, subtitle, preview):
+@click.option(
+    '--action',
+    type=click.Choice(['transcribe', 'translate'], case_sensitive=False),
+    default=None,
+    help='Action to perform: transcribe (no translation), translate (SRT input only). Default: both.'
+)
+def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad, subtitle, preview, action):
     """
     Extract subtitles from DATA_INPUT (file path, URL, or SRT file) using AI transcription.
 
@@ -705,6 +712,15 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
         else:
             language_name = None
             language_code = None
+
+        # --action translate requires SRT input
+        if action == 'translate' and not is_srt_file(data_input):
+            click.echo(
+                "❌ Error: --action translate requires an SRT file as input. "
+                "Provide an existing .srt file.",
+                err=True
+            )
+            sys.exit(1)
 
         # Handle SRT file input - skip to translation
         if is_srt_file(data_input):
@@ -949,7 +965,11 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
         click.echo(f"✓ SRT file created: {srt_path}")
 
         # Step 4: Offer translation (for URL inputs this becomes [4/4])
-        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
+        # Skip translation entirely when --action transcribe is specified
+        if action == 'transcribe':
+            translation_time = None
+        else:
+            translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
 
         # Clean up audio file if not keeping it
         if not keep_audio and audio_path.exists():

@@ -94,6 +94,9 @@ Settings are configured in `config.json` at the project root.
 - `--check-system`: Display system diagnostics (GPU, CUDA, ffmpeg, Ollama)
 - `--stable`: Use stable-ts for better timestamp accuracy (requires: `uv sync --extra stable`)
 - `--vad`: Enable VAD to reduce hallucinations in silence (requires: `--stable`)
+- `--action`: Action to perform: `transcribe` (skip translation entirely) or `translate` (SRT input only, skip transcription). Default: both (prompt for translation after transcribing)
+  - `--action transcribe` — transcribe only, no translation prompt
+  - `--action translate` — requires SRT file as input, goes directly to translation
 
 ## Project Structure
 ```
@@ -408,6 +411,12 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Set `"auto_unload": true` to restore VRAM-constrained behavior
 - Plan archived at `plan/finished/PLAN-configurable-auto-unload.md`
 
+### Completed: Add --action flag to separate transcribe/translate steps
+- `--action transcribe` — skip translation entirely after transcription (no prompt)
+- `--action translate` — requires SRT file as input; errors if given a video file
+- Two-phase `--preview` commands now include `--action transcribe` (Phase 1) and `--action translate` (Phase 2)
+- Plan archived at `plan/finished/PLAN-action-flag.md`
+
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
 - Add progress bars for long videos
@@ -418,4 +427,4 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 ### Next Session
 - No active work in progress. All planned features complete.
 - Pick up from Future enhancements above, or start a new feature.
-- Run `uv run pytest -v` to verify clean state (166 passed, 7 skipped as of last session).
+- Run `uv run pytest -v` to verify clean state (175 passed, 7 skipped as of last session).

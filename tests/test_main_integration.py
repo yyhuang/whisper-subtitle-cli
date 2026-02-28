@@ -433,3 +433,102 @@ class TestDefaultOutputDirectory:
             srt_call_args = mock_writer_instance.write_srt.call_args[0]
             srt_path = str(srt_call_args[1])
             assert tmpdir in srt_path  # Should be in video's directory
+
+
+class TestActionFlag:
+    """Integration tests for --action flag."""
+
+    @patch('main.translate_subtitles')
+    @patch('main.AudioExtractor')
+    @patch('main.Transcriber')
+    @patch('main.SubtitleWriter')
+    def test_action_transcribe_skips_translation(self, mock_writer, mock_transcriber, mock_extractor, mock_translate):
+        """--action transcribe should skip translation entirely (no prompt, no call)."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = Path(tmpdir) / 'test_video.mp4'
+            video_path.touch()
+
+            mock_extractor.return_value = MagicMock()
+            mock_transcriber_instance = MagicMock()
+            mock_transcriber.return_value = mock_transcriber_instance
+            mock_transcriber_instance.transcribe.return_value = [
+                {'start': 0.0, 'end': 1.0, 'text': 'Test'}
+            ]
+            mock_writer.return_value = MagicMock()
+
+            result = runner.invoke(
+                main.main,
+                [str(video_path), '--action', 'transcribe', '--output', tmpdir],
+            )
+
+            assert result.exit_code == 0, result.output
+            # translate_subtitles must NOT be called at all
+            mock_translate.assert_not_called()
+
+    @patch('main.handle_srt_translation')
+    def test_action_translate_with_srt_file_calls_translation(self, mock_handle):
+        """--action translate with SRT file should call handle_srt_translation."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            srt_path = Path(tmpdir) / 'test.srt'
+            srt_path.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello\n")
+
+            mock_handle.return_value = None
+
+            result = runner.invoke(
+                main.main,
+                [str(srt_path), '--action', 'translate', '-y'],
+            )
+
+            assert result.exit_code == 0, result.output
+            mock_handle.assert_called_once()
+
+    def test_action_translate_with_video_file_exits_with_error(self):
+        """--action translate with a video file (non-SRT) should exit with error."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = Path(tmpdir) / 'test_video.mp4'
+            video_path.touch()
+
+            result = runner.invoke(
+                main.main,
+                [str(video_path), '--action', 'translate'],
+            )
+
+            assert result.exit_code == 1
+            assert 'SRT' in result.output or 'srt' in result.output.lower()
+
+    @patch('main.translate_subtitles')
+    @patch('main.AudioExtractor')
+    @patch('main.Transcriber')
+    @patch('main.SubtitleWriter')
+    def test_no_action_flag_preserves_current_behavior(self, mock_writer, mock_transcriber, mock_extractor, mock_translate):
+        """No --action flag should prompt for translation (backward compat)."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = Path(tmpdir) / 'test_video.mp4'
+            video_path.touch()
+
+            mock_extractor.return_value = MagicMock()
+            mock_transcriber_instance = MagicMock()
+            mock_transcriber.return_value = mock_transcriber_instance
+            mock_transcriber_instance.transcribe.return_value = [
+                {'start': 0.0, 'end': 1.0, 'text': 'Test'}
+            ]
+            mock_writer.return_value = MagicMock()
+            mock_translate.return_value = None
+
+            result = runner.invoke(
+                main.main,
+                [str(video_path), '--output', tmpdir],
+                input='n\n',  # decline translation prompt
+            )
+
+            assert result.exit_code == 0, result.output
+            # translate_subtitles IS called (it just returns None when user says no)
+            mock_translate.assert_called_once()

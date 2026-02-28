@@ -98,6 +98,12 @@ uv run python main.py video.mp4 --stable --vad
 uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --subtitle 1
 uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --subtitle 0  # force transcribe
 
+# Transcribe only — skip translation entirely
+uv run python main.py video.mp4 --action transcribe
+
+# Translate an existing SRT directly — skip download/transcription
+uv run python main.py existing.srt --action translate -y
+
 # Preview mode: check subtitles, ask user, print the real command, then exit
 uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview
 
@@ -288,6 +294,27 @@ uv run python main.py "https://youtube.com/..." --language en --yes
 # (after you choose, auto-translates without further prompts)
 ```
 
+### The `--action` Flag
+
+Use `--action` to explicitly control what step to perform:
+
+| Flag | Behavior |
+|------|----------|
+| *(none)* | Transcribe, then prompt for translation (default) |
+| `--action transcribe` | Transcribe only — no translation prompt |
+| `--action translate` | Translate an existing SRT — skip download/transcription |
+
+```bash
+# Transcribe only — no translation prompt
+uv run python main.py video.mp4 --action transcribe
+
+# Translate an existing SRT directly
+uv run python main.py 20260123_video.srt --action translate -y
+
+# Error: --action translate requires an SRT file
+uv run python main.py video.mp4 --action translate  # exits with error
+```
+
 ### Batch Scripting (`--preview` and `--subtitle`)
 
 When processing many URLs in a script, the subtitle selection prompt blocks automation. Use `--preview` and `--subtitle` to handle this in two passes.
@@ -315,8 +342,8 @@ uv run python main.py 'https://youtube.com/watch?v=VIDEO_ID' --subtitle 1 -y
 
 When the video needs **transcription** (GPU needed for Whisper), two commands are output so you can free VRAM between phases:
 ```
-uv run python main.py 'https://youtube.com/watch?v=VIDEO_ID' --subtitle 0
-uv run python main.py '/path/to/20200101_VIDEO_ID.srt' -y
+uv run python main.py 'https://youtube.com/watch?v=VIDEO_ID' --subtitle 0 --action transcribe
+uv run python main.py '/path/to/20200101_VIDEO_ID.srt' -y --action translate
 ```
 
 Informational messages (subtitle list, prompt) go to stderr, so only the command(s) reach stdout.
@@ -339,7 +366,7 @@ bash real_run.sh
 ```
 
 Notes:
-- Transcription paths output **two commands**: Phase 1 transcribes only (no `-y`), Phase 2 translates the SRT (with `-y`)
+- Transcription paths output **two commands**: Phase 1 uses `--action transcribe` (no translation), Phase 2 uses `--action translate` with the SRT file (with `-y`)
 - Subtitle download paths (choice > 0) output **one command** with `-y` (no GPU used)
 - `--preview` never includes `--preview` in the output command(s)
 - Non-default flags (`--model`, `--language`, `--output`, `--keep-audio`, `--stable`, `--vad`) are preserved in both commands

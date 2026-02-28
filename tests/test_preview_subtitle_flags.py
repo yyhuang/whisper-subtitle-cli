@@ -815,3 +815,126 @@ class TestPreviewSingleCommandWhenAutoUnloadDisabled:
             assert len(cmds) == 1
             assert '--subtitle 0' in cmds[0]
             assert '-y' in cmds[0]
+
+
+class TestActionFlagInPreviewCommands:
+    """Tests that --preview two-phase commands include --action flag."""
+
+    @pytest.fixture(autouse=True)
+    def enable_auto_unload(self):
+        """Patch load_config with auto_unload=True for all tests in this class."""
+        config = {
+            'ollama': {
+                'model': 'translategemma:4b',
+                'base_url': 'http://localhost:11434',
+                'batch_size': 50,
+                'keep_alive': '10m',
+                'auto_unload': True,
+            },
+            'output': {'directory': None},
+        }
+        with patch('main.load_config', return_value=config):
+            yield
+
+    def _get_cmd_lines(self, output: str) -> list[str]:
+        return [l for l in output.strip().split('\n') if 'main.py' in l]
+
+    @patch('main.VideoDownloader')
+    def test_phase1_includes_action_transcribe(self, mock_downloader):
+        """Phase 1 command (transcription) should include --action transcribe."""
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_video_info.return_value = {
+            'video_id': 'abc123',
+            'upload_date': '20200101',
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+        )
+
+        assert result.exit_code == 0, result.output
+        first_cmd = self._get_cmd_lines(result.output)[0]
+        assert '--action transcribe' in first_cmd
+
+    @patch('main.VideoDownloader')
+    def test_phase2_includes_action_translate(self, mock_downloader):
+        """Phase 2 command (translation) should include --action translate."""
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_video_info.return_value = {
+            'video_id': 'abc123',
+            'upload_date': '20200101',
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+        )
+
+        assert result.exit_code == 0, result.output
+        second_cmd = self._get_cmd_lines(result.output)[1]
+        assert '--action translate' in second_cmd
+
+    def test_local_file_phase1_includes_action_transcribe(self):
+        """Local file --preview Phase 1 command should include --action transcribe."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = Path(tmpdir) / 'test_video.mp4'
+            video_path.touch()
+
+            result = runner.invoke(
+                main.main,
+                [str(video_path), '--preview'],
+            )
+
+            assert result.exit_code == 0, result.output
+            first_cmd = self._get_cmd_lines(result.output)[0]
+            assert '--action transcribe' in first_cmd
+
+    def test_local_file_phase2_includes_action_translate(self):
+        """Local file --preview Phase 2 command should include --action translate."""
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = Path(tmpdir) / 'test_video.mp4'
+            video_path.touch()
+
+            result = runner.invoke(
+                main.main,
+                [str(video_path), '--preview'],
+            )
+
+            assert result.exit_code == 0, result.output
+            second_cmd = self._get_cmd_lines(result.output)[1]
+            assert '--action translate' in second_cmd
+
+    @patch('main.VideoDownloader')
+    def test_phase1_no_action_flag_in_subtitle_download_command(self, mock_downloader):
+        """Subtitle download command (user picks >0) should NOT include --action."""
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = {
+            'en': {'name': 'English'},
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0
+        cmds = self._get_cmd_lines(result.output)
+        assert len(cmds) == 1
+        assert '--action' not in cmds[0]
