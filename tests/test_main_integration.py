@@ -532,3 +532,112 @@ class TestActionFlag:
             assert result.exit_code == 0, result.output
             # translate_subtitles IS called (it just returns None when user says no)
             mock_translate.assert_called_once()
+
+
+class TestSkipOptionInSubtitleMenu:
+    """Tests for 'S. Skip this video' option in the subtitle selection menu."""
+
+    def _make_downloader_with_subtitles(self, mock_downloader, tmpdir):
+        """Set up a mock downloader that returns two available subtitles."""
+        mock_dl = MagicMock()
+        mock_downloader.return_value = mock_dl
+        mock_dl.get_available_subtitles.return_value = {
+            'zh': {'name': 'Chinese'},
+            'en': {'name': 'English'},
+        }
+        mock_dl.get_video_info.return_value = {
+            'video_id': 'abc123',
+            'upload_date': '20240101',
+        }
+        return mock_dl
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_skip_option_shown_in_interactive_menu(self, mock_downloader, mock_config):
+        """'S. Skip this video' appears in the subtitle selection menu."""
+        runner = CliRunner()
+        mock_config.return_value = {
+            'ollama': {'model': 'test', 'base_url': 'http://localhost:11434',
+                       'batch_size': 50, 'keep_alive': '10m', 'auto_unload': False},
+            'output': {'directory': None},
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._make_downloader_with_subtitles(mock_downloader, tmpdir)
+
+            result = runner.invoke(
+                main.main,
+                ['https://youtube.com/watch?v=abc123'],
+                input='s\n',  # choose skip
+            )
+
+            assert result.exit_code == 0, result.output
+            assert 'Skip' in result.output or 'skip' in result.output.lower()
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_skip_in_interactive_exits_without_processing(self, mock_downloader, mock_config):
+        """Choosing 's' in interactive mode exits cleanly without downloading or transcribing."""
+        runner = CliRunner()
+        mock_config.return_value = {
+            'ollama': {'model': 'test', 'base_url': 'http://localhost:11434',
+                       'batch_size': 50, 'keep_alive': '10m', 'auto_unload': False},
+            'output': {'directory': None},
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_dl = self._make_downloader_with_subtitles(mock_downloader, tmpdir)
+
+            result = runner.invoke(
+                main.main,
+                ['https://youtube.com/watch?v=abc123'],
+                input='s\n',
+            )
+
+            assert result.exit_code == 0, result.output
+            mock_dl.download.assert_not_called()
+            mock_dl.download_subtitle.assert_not_called()
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_skip_in_preview_emits_no_command(self, mock_downloader, mock_config):
+        """Choosing 's' in --preview mode emits no runnable command to output."""
+        runner = CliRunner()
+        mock_config.return_value = {
+            'ollama': {'model': 'test', 'base_url': 'http://localhost:11434',
+                       'batch_size': 50, 'keep_alive': '10m', 'auto_unload': False},
+            'output': {'directory': None},
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._make_downloader_with_subtitles(mock_downloader, tmpdir)
+
+            result = runner.invoke(
+                main.main,
+                ['https://youtube.com/watch?v=abc123', '--preview'],
+                input='s\n',
+            )
+
+            assert result.exit_code == 0, result.output
+            # No runnable command should appear — the line "uv run python main.py ..."
+            # is only emitted when a subtitle/transcription choice is made
+            assert 'uv run python main.py' not in result.output
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_skip_option_shown_in_preview_menu(self, mock_downloader, mock_config):
+        """'S. Skip' appears in the subtitle selection menu during --preview."""
+        runner = CliRunner()
+        mock_config.return_value = {
+            'ollama': {'model': 'test', 'base_url': 'http://localhost:11434',
+                       'batch_size': 50, 'keep_alive': '10m', 'auto_unload': False},
+            'output': {'directory': None},
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._make_downloader_with_subtitles(mock_downloader, tmpdir)
+
+            result = runner.invoke(
+                main.main,
+                ['https://youtube.com/watch?v=abc123', '--preview'],
+                input='s\n',
+            )
+
+            assert result.exit_code == 0
+            assert 'Skip' in result.output or 'skip' in result.output.lower()

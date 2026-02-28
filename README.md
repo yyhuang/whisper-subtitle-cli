@@ -153,8 +153,9 @@ Available subtitles:
   2. Spanish (es)
   3. German (de)
   0. Transcribe video instead
+  S. Skip this video
 
-Which subtitle would you like to download? [0]: 1
+Which subtitle would you like? (0-N, or S to skip) [0]: 1
 
 Downloading English subtitle...
 ✓ Subtitle downloaded: YYYYMMDD_Video_Title.srt
@@ -167,6 +168,7 @@ Downloading English subtitle...
 - 🎯 **Smart filtering**: Only shows manual subtitles (auto-generated are hidden)
 - 🔄 **Automatic fallback**: If no subtitles exist, automatically transcribes
 - 🎛️ **User choice**: Select option 0 to transcribe even when subtitles available
+- ⏭️ **Skip option**: Enter `S` to skip a video entirely (useful in batch preview runs)
 - 🤖 **Automation-friendly**: Use `--subtitle N` to pre-select, `--preview` for batch scripts (see [Batch Scripting](#batch-scripting---preview-and---subtitle))
 
 ### Subtitle Translation (Ollama)
@@ -289,7 +291,8 @@ uv run python main.py "https://youtube.com/..." --language en --yes
 #   1. English (en)
 #   2. Spanish (es)
 #   0. Transcribe video instead
-# Which subtitle would you like to download? [0]:    ← still prompts here
+#   S. Skip this video
+# Which subtitle would you like? (0-N, or S to skip) [0]:    ← still prompts here
 #
 # (after you choose, auto-translates without further prompts)
 ```
@@ -368,6 +371,7 @@ bash real_run.sh
 Notes:
 - Transcription paths output **two commands**: Phase 1 uses `--action transcribe` (no translation), Phase 2 uses `--action translate` with the SRT file (with `-y`)
 - Subtitle download paths (choice > 0) output **one command** with `-y` (no GPU used)
+- Enter **`S` to skip** a video — no command is emitted, so that URL is absent from `real_run.sh`
 - `--preview` never includes `--preview` in the output command(s)
 - Non-default flags (`--model`, `--language`, `--output`, `--keep-audio`, `--stable`, `--vad`) are preserved in both commands
 - Informational output goes to **stderr**; only the command(s) go to **stdout** (enables clean piping)

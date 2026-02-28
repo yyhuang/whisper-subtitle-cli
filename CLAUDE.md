@@ -263,6 +263,7 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Two-phase preview commands for VRAM-constrained machines (see `plan/finished/PLAN-two-phase-preview.md`)
 - Auto-unload Ollama models before Whisper, configurable via `ollama.auto_unload` in `config.json` (see `plan/finished/PLAN-configurable-auto-unload.md`)
 - `--action` flag to separate transcribe/translate steps (see `plan/finished/PLAN-action-flag.md`)
+- `S. Skip this video` option in the subtitle selection menu — preview mode emits nothing (video absent from batch script), interactive mode exits cleanly
 
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
@@ -274,4 +275,4 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 ### Next Session
 - No active work in progress. All planned features complete.
 - Pick up from Future enhancements above, or start a new feature.
-- Run `uv run pytest -v` to verify clean state (175 passed, 7 skipped as of last session).
+- Run `uv run pytest -v` to verify clean state (179 passed, 7 skipped as of last session).

@@ -62,6 +62,27 @@ class DataInput(click.ParamType):
         return str(path.resolve())
 
 
+class SubtitleChoice(click.ParamType):
+    """Accepts an integer in [0, max_val] or 's'/'S' to skip the video."""
+    name = "choice"
+
+    def __init__(self, max_val: int):
+        self.max_val = max_val
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str) and value.strip().lower() == 's':
+            return 's'
+        try:
+            int_val = int(value)
+            if 0 <= int_val <= self.max_val:
+                return int_val
+            self.fail(f"Expected 0-{self.max_val} or 'S' to skip", param, ctx)
+        except (ValueError, TypeError):
+            self.fail(f"Expected 0-{self.max_val} or 'S' to skip", param, ctx)
+
+
 def is_srt_file(path: str) -> bool:
     """Check if the input is an SRT subtitle file."""
     return path.lower().endswith('.srt')
@@ -759,15 +780,18 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                     for idx, (lang_code, info) in enumerate(subtitle_list, 1):
                         click.echo(f"  {idx}. {info['name']} ({lang_code})", err=preview)
                     click.echo(f"  0. Transcribe video instead", err=preview)
+                    click.echo(f"  S. Skip this video", err=preview)
 
                     if preview:
                         # Prompt goes to stderr so only the command(s) reach stdout
                         choice = click.prompt(
-                            "\nWhich subtitle would you like to download?",
-                            type=click.IntRange(0, len(subtitle_list)),
-                            default=0,
+                            "\nWhich subtitle would you like? (0-N, or S to skip)",
+                            type=SubtitleChoice(len(subtitle_list)),
+                            default='0',
                             err=True,
                         )
+                        if choice == 's':
+                            return  # Skip: emit nothing to stdout
                         if choice == 0:
                             if config['ollama'].get('auto_unload', False):
                                 # Two-phase: transcribe first, translate separately (VRAM constraint)
@@ -799,10 +823,12 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                         # Always prompt regardless of --yes (this is fast, user is at terminal)
                         # --yes only affects translation prompts after transcription.
                         choice = click.prompt(
-                            "\nWhich subtitle would you like to download?",
-                            type=click.IntRange(0, len(subtitle_list)),
-                            default=0,
+                            "\nWhich subtitle would you like? (0-N, or S to skip)",
+                            type=SubtitleChoice(len(subtitle_list)),
+                            default='0',
                         )
+                        if choice == 's':
+                            return  # Skip this video
 
                     if choice > 0:
                         # Download selected subtitle
