@@ -150,140 +150,12 @@ All core features implemented and tested:
 
 ## Usage
 
-### Basic Usage
-```bash
-# Extract subtitles from a local video file
-uv run python main.py video.mp4
-# Creates: YYYYMMDD_video.srt (subtitle file with timestamps)
-
-# Extract subtitles from a YouTube URL
-uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
-# Creates subtitle files in current working directory
-
-# Short YouTube URL format
-uv run python main.py "https://youtu.be/VIDEO_ID"
-
-# Translate an existing SRT file (skip download/transcription)
-uv run python main.py existing_subtitle.srt
-# Goes directly to translation prompt
-```
-
-### Advanced Options
-```bash
-# Use a larger model for better accuracy (slower)
-uv run python main.py video.mp4 --model medium
-
-# Specify language (faster than auto-detect)
-uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --language en
-
-# Save to a different directory
-uv run python main.py video.mp4 --output ./subtitles
-
-# Keep the extracted audio file
-uv run python main.py video.mp4 --keep-audio
-
-# Auto-translate after transcription (no prompts)
-uv run python main.py video.mp4 --yes
-
-# Use stable-ts for better timestamps
-uv run python main.py video.mp4 --stable
-
-# Add VAD to reduce hallucinations in silence (optional)
-uv run python main.py video.mp4 --stable --vad
-```
-
-### YouTube URL Support
-```bash
-# Process any YouTube video
-uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
-
-# Works with playlists, shorts, and other platforms
-uv run python main.py "https://vimeo.com/123456"
-
-# Downloaded videos go to temp directory (OS cleans up automatically)
-# Subtitle files are saved to current working directory
-```
-
-### Subtitle Download (YouTube)
-When processing a YouTube URL, the tool automatically checks for existing subtitles:
-
-```bash
-uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
-
-# Output:
-Checking for available subtitles...
-
-Available subtitles:
-  1. English (en)
-  2. Spanish (es)
-  3. French (fr)
-  0. Transcribe video instead
-
-Which subtitle would you like to download? [0]: 1
-
-Downloading English subtitle...
-✓ Subtitle downloaded: Video_Title.srt
-✅ Done!
-```
-
-**Features**:
-- Only shows human-made subtitles (auto-generated are filtered out)
-- Much faster than transcription (~1 second vs 30-120 seconds)
-- If no subtitles exist, automatically falls back to transcription
-- Option 0 allows transcription even when subtitles are available
-
-### Subtitle Translation (Ollama)
-After creating or downloading subtitles, you can translate them using a local Ollama model:
-
-```bash
-uv run python main.py video.mp4
-
-# Output:
-✓ SRT file created: 20260119_video.srt
-
-Would you like to translate the subtitles? [Y/n]:
-Source language [English]:
-Target language [Chinese]:
-Create bilingual subtitle (original + translation)? [Y/n]:
-
-Using Ollama model: translategemma:4b
-
-Translating 150 segments...
-  Translating segment 150/150...
-✓ Translated SRT created: 20260119_video.Chinese.srt
-
-✅ Done! Subtitle extraction complete.
-```
-
-**Requirements**:
-- Ollama must be running locally (`ollama serve`)
-- Model must be pulled (`ollama pull translategemma:4b`)
-
-**How Translation Works**:
-- Segments are translated in **batches** (default: 50 segments per batch) for better context
-- Batch translation provides better quality than one-by-one translation
-- If a batch fails, it's automatically **split in half** and retried
-- This continues recursively until the problematic segment is isolated
-- Timestamps are preserved by our code - the LLM never sees them
-
-**Configuration**:
-Edit `config.json` to change the model, API URL, or batch size:
-```json
-{
-  "ollama": {
-    "model": "llama3:8b",
-    "base_url": "http://localhost:11434",
-    "batch_size": 50
-  }
-}
-```
-
-### Available Models
-- **tiny**: Fastest, least accurate (~39MB)
-- **base**: Good balance (~140MB)
-- **small**: Better accuracy (~470MB)
-- **medium**: High accuracy (default, ~1.5GB)
-- **large**: Best accuracy (~2.9GB)
+See `README.md` for full usage examples:
+- Basic usage and advanced options → `README.md` § Basic Usage, Advanced Options
+- Subtitle download (YouTube) → `README.md` § Subtitle Download (YouTube)
+- Subtitle translation (Ollama) → `README.md` § Subtitle Translation (Ollama)
+- Batch scripting (`--preview`, `--subtitle`, `--action`) → `README.md` § Batch Scripting, The `--action` Flag
+- Whisper model sizes and language codes → `README.md` § Whisper Model Options, Language Codes
 
 ## Setup
 ```bash
@@ -385,37 +257,12 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 
 ## Next Steps
 
-### Completed: `--preview` and `--subtitle` flags for batch script automation
-- `--subtitle N` — pre-select subtitle by index (0=transcribe, 1+=download), skips interactive prompt
-- `--preview` — checks subtitles, asks user interactively, outputs the real command to stdout, exits
-- Plan archived at `plan/finished/PLAN-preview-subtitle-flags.md`
-
-### Completed: Fix subtitle language code handling
-- Dirty yt-dlp lang codes (e.g. `en-nP7-2PuUl7o`) now display as `English (en)` instead of garbage
-- `--subtitle N --language zh` now correctly uses the downloaded subtitle's language (e.g. English) as translation source, not the `--language` flag value (meant for Whisper)
-- Plan archived at `plan/finished/PLAN-fix-subtitle-lang-codes.md`
-
-### Completed: Two-phase preview commands for VRAM-constrained machines
-- `--preview` for transcription paths now outputs TWO commands (Phase 1: transcribe only, Phase 2: translate SRT)
-- Subtitle download paths (choice > 0) keep single-command behavior (no GPU used)
-- Plan archived at `plan/finished/PLAN-two-phase-preview.md`
-
-### Completed: Auto-unload Ollama models before Whisper
-- `unload_all_models(base_url)` in `src/translator.py`: calls `GET /api/ps` then `POST /api/generate` with `keep_alive=0` for each loaded model
-- Called automatically in `main.py` just before `Transcriber()` loads Whisper
-- Silent no-op when Ollama is not running or no models loaded; prints message only when models were evicted
-
-### Completed: Make auto_unload configurable (default off)
-- Both auto-unload and two-phase preview are now gated by `ollama.auto_unload` in `config.json`
-- Default is `false` (opt-in) — users with enough VRAM don't need either behavior
-- Set `"auto_unload": true` to restore VRAM-constrained behavior
-- Plan archived at `plan/finished/PLAN-configurable-auto-unload.md`
-
-### Completed: Add --action flag to separate transcribe/translate steps
-- `--action transcribe` — skip translation entirely after transcription (no prompt)
-- `--action translate` — requires SRT file as input; errors if given a video file
-- Two-phase `--preview` commands now include `--action transcribe` (Phase 1) and `--action translate` (Phase 2)
-- Plan archived at `plan/finished/PLAN-action-flag.md`
+### Completed
+- `--preview` and `--subtitle` flags for batch script automation (see `plan/finished/PLAN-preview-subtitle-flags.md`)
+- Fix subtitle language code handling — dirty yt-dlp codes now display cleanly (see `plan/finished/PLAN-fix-subtitle-lang-codes.md`)
+- Two-phase preview commands for VRAM-constrained machines (see `plan/finished/PLAN-two-phase-preview.md`)
+- Auto-unload Ollama models before Whisper, configurable via `ollama.auto_unload` in `config.json` (see `plan/finished/PLAN-configurable-auto-unload.md`)
+- `--action` flag to separate transcribe/translate steps (see `plan/finished/PLAN-action-flag.md`)
 
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
