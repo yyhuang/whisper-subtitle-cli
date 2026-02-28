@@ -20,7 +20,7 @@ from src.audio_extractor import AudioExtractor
 from src.transcriber import Transcriber
 from src.subtitle_writer import SubtitleWriter
 from src.video_downloader import VideoDownloader, is_url
-from src.translator import OllamaTranslator, load_config, parse_language
+from src.translator import OllamaTranslator, load_config, parse_language, unload_all_models
 
 # =============================================================================
 # CUDA Version Configuration
@@ -917,6 +917,10 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
             click.echo(f"      Language: {language_name} ({language_code})")
         else:
             click.echo("      Language: auto-detect")
+
+        n_unloaded = unload_all_models(config['ollama']['base_url'])
+        if n_unloaded:
+            click.echo(f"  Unloading {n_unloaded} Ollama model(s) to free VRAM...")
 
         transcriber = Transcriber(model_size=model, use_stable=stable, use_vad=vad)
         click.echo(f"      Device: {transcriber.device} ({transcriber.compute_type})")

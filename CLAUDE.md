@@ -392,6 +392,11 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Subtitle download paths (choice > 0) keep single-command behavior (no GPU used)
 - Plan archived at `plan/finished/PLAN-two-phase-preview.md`
 
+### Completed: Auto-unload Ollama models before Whisper
+- `unload_all_models(base_url)` in `src/translator.py`: calls `GET /api/ps` then `POST /api/generate` with `keep_alive=0` for each loaded model
+- Called automatically in `main.py` just before `Transcriber()` loads Whisper
+- Silent no-op when Ollama is not running or no models loaded; prints message only when models were evicted
+
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
 - Add progress bars for long videos

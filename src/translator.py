@@ -120,6 +120,35 @@ def get_language_name(code: str) -> str:
     return LANGUAGE_NAMES.get(code.lower(), code)
 
 
+def unload_all_models(base_url: str) -> int:
+    """
+    Unload all models currently loaded in Ollama to free VRAM.
+
+    Args:
+        base_url: Ollama API base URL (e.g., 'http://localhost:11434')
+
+    Returns:
+        Number of models unloaded, or 0 if Ollama is not running / no models loaded.
+    """
+    try:
+        response = requests.get(f"{base_url}/api/ps", timeout=5)
+        models = response.json().get('models', [])
+    except requests.exceptions.RequestException:
+        return 0
+
+    for model_info in models:
+        try:
+            requests.post(
+                f"{base_url}/api/generate",
+                json={"model": model_info['model'], "prompt": "", "stream": False, "keep_alive": 0},
+                timeout=10,
+            )
+        except requests.exceptions.RequestException:
+            pass
+
+    return len(models)
+
+
 def load_config() -> dict:
     """
     Load configuration from config.json file.

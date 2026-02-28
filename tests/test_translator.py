@@ -637,3 +637,69 @@ class TestBatchTranslation:
         assert len(progress_calls) > 0
         # Final call should show completion
         assert progress_calls[-1] == (3, 3)
+
+
+class TestUnloadAllModels:
+    """Tests for the unload_all_models function."""
+
+    @patch('src.translator.requests.get')
+    def test_returns_zero_when_no_models_loaded(self, mock_get):
+        """Should return 0 and not call generate when no models are loaded."""
+        from src.translator import unload_all_models
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: {'models': []},
+        )
+
+        assert unload_all_models('http://localhost:11434') == 0
+
+    @patch('src.translator.requests.post')
+    @patch('src.translator.requests.get')
+    def test_unloads_each_loaded_model(self, mock_get, mock_post):
+        """Should call generate with keep_alive=0 for every loaded model."""
+        from src.translator import unload_all_models
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: {'models': [{'model': 'llama3:8b'}, {'model': 'gemma:2b'}]},
+        )
+        mock_post.return_value = Mock(status_code=200, json=lambda: {'response': ''})
+
+        n = unload_all_models('http://localhost:11434')
+
+        assert n == 2
+        assert mock_post.call_count == 2
+
+    @patch('src.translator.requests.post')
+    @patch('src.translator.requests.get')
+    def test_unload_request_uses_keep_alive_zero(self, mock_get, mock_post):
+        """Unload request must pass keep_alive=0 for the correct model."""
+        from src.translator import unload_all_models
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: {'models': [{'model': 'llama3:8b'}]},
+        )
+        mock_post.return_value = Mock(status_code=200, json=lambda: {'response': ''})
+
+        unload_all_models('http://localhost:11434')
+
+        payload = mock_post.call_args[1]['json']
+        assert payload['keep_alive'] == 0
+        assert payload['model'] == 'llama3:8b'
+
+    @patch('src.translator.requests.get')
+    def test_returns_zero_on_connection_error(self, mock_get):
+        """Should return 0 silently when Ollama is not reachable."""
+        import requests as req
+        from src.translator import unload_all_models
+        mock_get.side_effect = req.exceptions.ConnectionError()
+
+        assert unload_all_models('http://localhost:11434') == 0
+
+    @patch('src.translator.requests.get')
+    def test_returns_zero_on_any_request_exception(self, mock_get):
+        """Should return 0 silently on any requests error."""
+        import requests as req
+        from src.translator import unload_all_models
+        mock_get.side_effect = req.exceptions.RequestException()
+
+        assert unload_all_models('http://localhost:11434') == 0
