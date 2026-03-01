@@ -28,7 +28,7 @@ class TestMainWithURLInput:
             mock_downloader.return_value = mock_downloader_instance
 
             # Mock subtitle check - return empty (no subtitles)
-            mock_downloader_instance.get_available_subtitles.return_value = {}
+            mock_downloader_instance.get_available_subtitles.return_value = ({}, {'title': 'Unknown', 'channel': None})
 
             mock_downloader_instance.download.return_value = {
                 'file_path': f'{tmpdir}/abc123.mp4',
@@ -86,7 +86,7 @@ class TestMainWithURLInput:
             mock_downloader.return_value = mock_downloader_instance
 
             # Mock subtitle check - return empty (no subtitles)
-            mock_downloader_instance.get_available_subtitles.return_value = {}
+            mock_downloader_instance.get_available_subtitles.return_value = ({}, {'title': 'Unknown', 'channel': None})
 
             mock_downloader_instance.download.return_value = {
                 'file_path': f'{tmpdir}/xyz789.mp4',
@@ -367,7 +367,7 @@ class TestDefaultOutputDirectory:
             # Mock VideoDownloader
             mock_downloader_instance = MagicMock()
             mock_downloader.return_value = mock_downloader_instance
-            mock_downloader_instance.get_available_subtitles.return_value = {}
+            mock_downloader_instance.get_available_subtitles.return_value = ({}, {'title': 'Unknown', 'channel': None})
             mock_downloader_instance.download.return_value = {
                 'file_path': f'{tmpdir}/abc123.mp4',
                 'title': 'Test Video',
@@ -541,10 +541,10 @@ class TestSkipOptionInSubtitleMenu:
         """Set up a mock downloader that returns two available subtitles."""
         mock_dl = MagicMock()
         mock_downloader.return_value = mock_dl
-        mock_dl.get_available_subtitles.return_value = {
-            'zh': {'name': 'Chinese'},
-            'en': {'name': 'English'},
-        }
+        mock_dl.get_available_subtitles.return_value = (
+            {'zh': {'name': 'Chinese'}, 'en': {'name': 'English'}},
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
         mock_dl.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20240101',

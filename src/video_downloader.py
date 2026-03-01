@@ -4,7 +4,7 @@ import sys
 import tempfile
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 import yt_dlp
 
 
@@ -119,9 +119,9 @@ class VideoDownloader:
         """
         return is_url(url)
 
-    def get_available_subtitles(self, url: str) -> Dict[str, Dict]:
+    def get_available_subtitles(self, url: str) -> Tuple[Dict[str, Dict], Dict[str, any]]:
         """
-        Get list of available subtitles for a video.
+        Get list of available subtitles and video metadata for a video.
 
         Only returns human-made subtitles (filters out auto-generated).
 
@@ -129,13 +129,18 @@ class VideoDownloader:
             url: Video URL to check
 
         Returns:
-            Dictionary mapping language codes to subtitle info:
-            {
+            Tuple of (subtitles_dict, video_meta_dict):
+            - subtitles_dict: {
                 'en': {'name': 'English', 'ext': 'srt'},
                 'es': {'name': 'Spanish', 'ext': 'srt'},
                 ...
-            }
-            Returns empty dict if no manual subtitles available.
+              }
+              Empty dict if no manual subtitles available.
+            - video_meta_dict: {
+                'title': 'Video Title',
+                'channel': 'Channel Name' or None,
+              }
+              Empty dict on error.
         """
         ydl_opts = {
             'quiet': True,
@@ -159,11 +164,16 @@ class VideoDownloader:
                             'ext': sub_list[0].get('ext', 'srt')
                         }
 
-                return result
+                video_meta = {
+                    'title': info.get('title', 'Unknown'),
+                    'channel': info.get('channel', None),
+                }
+
+                return result, video_meta
 
         except Exception as e:
-            # If we can't get subtitles, return empty dict
-            return {}
+            # If we can't get subtitles, return empty dict and empty meta
+            return {}, {}
 
     def download_subtitle(self, url: str, language: str, output_path: str) -> str:
         """
@@ -233,7 +243,8 @@ class VideoDownloader:
                     'video_id': info.get('id', 'unknown'),
                     'duration': info.get('duration', 0.0),
                     'platform': info.get('extractor', 'unknown').lower(),
-                    'upload_date': info.get('upload_date', None)
+                    'upload_date': info.get('upload_date', None),
+                    'channel': info.get('channel', None),
                 }
         except Exception as e:
             raise Exception(f"Failed to get video info: {str(e)}")

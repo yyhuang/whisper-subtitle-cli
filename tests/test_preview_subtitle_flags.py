@@ -67,10 +67,13 @@ class TestSubtitleFlag:
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_downloader_instance = MagicMock()
             mock_downloader.return_value = mock_downloader_instance
-            mock_downloader_instance.get_available_subtitles.return_value = {
+            mock_downloader_instance.get_available_subtitles.return_value = ({
+
                 'en': {'name': 'English'},
                 'es': {'name': 'Spanish'},
-            }
+            },
+                {'title': 'Test Video', 'channel': 'Test Channel'},
+            )
             mock_downloader_instance.get_video_info.return_value = {
                 'video_id': 'abc123',
                 'title': 'Test Video',
@@ -110,9 +113,12 @@ class TestSubtitleFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -128,7 +134,7 @@ class TestSubtitleFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {}
+        mock_downloader_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
 
         result = runner.invoke(
             main.main,
@@ -146,10 +152,13 @@ class TestSubtitleFlag:
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_downloader_instance = MagicMock()
             mock_downloader.return_value = mock_downloader_instance
-            mock_downloader_instance.get_available_subtitles.return_value = {
+            mock_downloader_instance.get_available_subtitles.return_value = ({
+
                 'en': {'name': 'English'},
                 'es': {'name': 'Spanish'},
-            }
+            },
+                {'title': 'Test Video', 'channel': 'Test Channel'},
+            )
             mock_downloader_instance.get_video_info.return_value = {
                 'video_id': 'abc123',
                 'title': 'Test Video',
@@ -198,9 +207,12 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -218,9 +230,12 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -239,9 +254,12 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -260,9 +278,12 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -299,9 +320,12 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
         mock_downloader_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -325,7 +349,7 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {}
+        mock_downloader_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_downloader_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -346,9 +370,12 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -367,9 +394,12 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -388,9 +418,12 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -409,10 +442,13 @@ class TestPreviewFlag:
 
         mock_downloader_instance = MagicMock()
         mock_downloader.return_value = mock_downloader_instance
-        mock_downloader_instance.get_available_subtitles.return_value = {
+        mock_downloader_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
             'fr': {'name': 'French'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
         mock_downloader_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -443,9 +479,12 @@ class TestSubtitleDownloadTranslationSourceLanguage:
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_downloader_instance = MagicMock()
             mock_downloader.return_value = mock_downloader_instance
-            mock_downloader_instance.get_available_subtitles.return_value = {
+            mock_downloader_instance.get_available_subtitles.return_value = ({
+
                 'en': {'name': 'English'},
-            }
+            },
+                {'title': 'Test Video', 'channel': 'Test Channel'},
+            )
             mock_downloader_instance.get_video_info.return_value = {
                 'video_id': 'abc123',
                 'title': 'Test Video',
@@ -521,7 +560,7 @@ class TestPreviewTwoPhaseWorkflow:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -542,7 +581,7 @@ class TestPreviewTwoPhaseWorkflow:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -565,7 +604,7 @@ class TestPreviewTwoPhaseWorkflow:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -589,7 +628,7 @@ class TestPreviewTwoPhaseWorkflow:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -612,9 +651,12 @@ class TestPreviewTwoPhaseWorkflow:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {
+        mock_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -636,9 +678,12 @@ class TestPreviewTwoPhaseWorkflow:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {
+        mock_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -692,7 +737,7 @@ class TestPreviewTwoPhaseWorkflow:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -715,7 +760,7 @@ class TestPreviewTwoPhaseWorkflow:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -759,7 +804,7 @@ class TestPreviewSingleCommandWhenAutoUnloadDisabled:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
 
         result = runner.invoke(
             main.main,
@@ -781,7 +826,7 @@ class TestPreviewSingleCommandWhenAutoUnloadDisabled:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {'en': {'name': 'English'}}
+        mock_instance.get_available_subtitles.return_value = ({'en': {'name': 'English'}}, {'title': 'Test Video', 'channel': 'Test Channel'})
 
         result = runner.invoke(
             main.main,
@@ -846,7 +891,7 @@ class TestActionFlagInPreviewCommands:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -868,7 +913,7 @@ class TestActionFlagInPreviewCommands:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {}
+        mock_instance.get_available_subtitles.return_value = ({}, {'title': 'Test Video', 'channel': 'Test Channel'})
         mock_instance.get_video_info.return_value = {
             'video_id': 'abc123',
             'upload_date': '20200101',
@@ -924,9 +969,12 @@ class TestActionFlagInPreviewCommands:
 
         mock_instance = MagicMock()
         mock_downloader.return_value = mock_instance
-        mock_instance.get_available_subtitles.return_value = {
+        mock_instance.get_available_subtitles.return_value = ({
+
             'en': {'name': 'English'},
-        }
+        },
+            {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
 
         result = runner.invoke(
             main.main,
@@ -938,3 +986,241 @@ class TestActionFlagInPreviewCommands:
         cmds = self._get_cmd_lines(result.output)
         assert len(cmds) == 1
         assert '--action' not in cmds[0]
+
+
+class TestChannelTitleInSubtitleMenu:
+    """Tests that channel name and video title are shown in the subtitle menu."""
+
+    def _make_config(self, auto_unload=False):
+        return {
+            'ollama': {
+                'model': 'translategemma:4b',
+                'base_url': 'http://localhost:11434',
+                'batch_size': 50,
+                'keep_alive': '10m',
+                'auto_unload': auto_unload,
+            },
+            'output': {'directory': None},
+        }
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_subtitle_menu_shows_video_header(self, mock_downloader, mock_config):
+        """Subtitle menu should display 'Video: Channel - Title (URL)' header."""
+        mock_config.return_value = self._make_config()
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {'en': {'name': 'English'}},
+            {'title': 'My Video', 'channel': 'My Channel'},
+        )
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123'],
+            input='s\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        assert 'My Channel' in result.output
+        assert 'My Video' in result.output
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_subtitle_menu_shows_title_only_when_no_channel(self, mock_downloader, mock_config):
+        """When channel is missing, show just the title."""
+        mock_config.return_value = self._make_config()
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {'en': {'name': 'English'}},
+            {'title': 'My Video', 'channel': None},
+        )
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123'],
+            input='s\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        assert 'My Video' in result.output
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_preview_menu_shows_video_header(self, mock_downloader, mock_config):
+        """In --preview mode, subtitle menu should also show the video header."""
+        mock_config.return_value = self._make_config()
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {'en': {'name': 'English'}},
+            {'title': 'My Video', 'channel': 'My Channel'},
+        )
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        assert 'My Channel' in result.output
+        assert 'My Video' in result.output
+
+
+class TestChannelTitleInPreviewOutput:
+    """Tests that preview output includes a comment line with channel/title."""
+
+    def _make_config(self, auto_unload=False):
+        return {
+            'ollama': {
+                'model': 'translategemma:4b',
+                'base_url': 'http://localhost:11434',
+                'batch_size': 50,
+                'keep_alive': '10m',
+                'auto_unload': auto_unload,
+            },
+            'output': {'directory': None},
+        }
+
+    def _get_comment_lines(self, output: str) -> list[str]:
+        """Extract lines starting with # from output."""
+        return [l for l in output.strip().split('\n') if l.startswith('#')]
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_preview_output_has_comment_with_channel_title(self, mock_downloader, mock_config):
+        """Preview output should have '# Channel - Title (URL)' comment before command."""
+        mock_config.return_value = self._make_config()
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {'en': {'name': 'English'}},
+            {'title': 'My Video', 'channel': 'My Channel'},
+        )
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        comments = self._get_comment_lines(result.output)
+        assert len(comments) >= 1
+        assert 'My Channel' in comments[0]
+        assert 'My Video' in comments[0]
+        assert 'abc123' in comments[0]
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_preview_comment_with_no_channel(self, mock_downloader, mock_config):
+        """Preview comment should work with missing channel (just title)."""
+        mock_config.return_value = self._make_config()
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {'en': {'name': 'English'}},
+            {'title': 'My Video', 'channel': None},
+        )
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='1\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        comments = self._get_comment_lines(result.output)
+        assert len(comments) >= 1
+        assert 'My Video' in comments[0]
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_preview_no_subtitles_has_comment(self, mock_downloader, mock_config):
+        """Preview with no subtitles should still have comment line."""
+        mock_config.return_value = self._make_config()
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {},
+            {'title': 'My Video', 'channel': 'My Channel'},
+        )
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+        )
+
+        assert result.exit_code == 0, result.output
+        comments = self._get_comment_lines(result.output)
+        assert len(comments) >= 1
+        assert 'My Channel' in comments[0]
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_two_phase_preview_has_comment(self, mock_downloader, mock_config):
+        """Two-phase preview (auto_unload=True) should have comment before commands."""
+        mock_config.return_value = self._make_config(auto_unload=True)
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {},
+            {'title': 'My Video', 'channel': 'My Channel'},
+        )
+        mock_instance.get_video_info.return_value = {
+            'video_id': 'abc123',
+            'upload_date': '20200101',
+        }
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+        )
+
+        assert result.exit_code == 0, result.output
+        comments = self._get_comment_lines(result.output)
+        assert len(comments) >= 1
+        assert 'My Channel' in comments[0]
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_skip_emits_no_comment(self, mock_downloader, mock_config):
+        """When user skips in preview, no comment or command should be emitted."""
+        mock_config.return_value = self._make_config()
+        runner = CliRunner()
+
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {'en': {'name': 'English'}},
+            {'title': 'My Video', 'channel': 'My Channel'},
+        )
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='s\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        # No command or comment should be in stdout output
+        assert 'uv run python main.py' not in result.output
+        # The comment should NOT appear when skipping
+        comments = self._get_comment_lines(result.output)
+        assert len(comments) == 0

@@ -264,6 +264,7 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Auto-unload Ollama models before Whisper, configurable via `ollama.auto_unload` in `config.json` (see `plan/finished/PLAN-configurable-auto-unload.md`)
 - `--action` flag to separate transcribe/translate steps (see `plan/finished/PLAN-action-flag.md`)
 - `S. Skip this video` option in the subtitle selection menu — preview mode emits nothing (video absent from batch script), interactive mode exits cleanly
+- Channel name + video title shown in subtitle menu header and as `# comment` in `--preview` output
 
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
@@ -275,4 +276,5 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 ### Next Session
 - No active work in progress. All planned features complete.
 - Pick up from Future enhancements above, or start a new feature.
-- Run `uv run pytest -v` to verify clean state (179 passed, 7 skipped as of last session).
+- Run `uv run pytest -v` to verify clean state (193 passed, 7 skipped as of last session).
+- The 7 skipped tests are `stable-ts` related — they skip automatically when `stable-ts` is not installed (optional dep). Run `uv sync --extra stable` to enable them.

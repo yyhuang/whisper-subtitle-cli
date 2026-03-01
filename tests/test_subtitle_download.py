@@ -11,7 +11,7 @@ class TestGetAvailableSubtitles:
 
     @patch('src.video_downloader.yt_dlp.YoutubeDL')
     def test_get_available_subtitles_returns_dict(self, mock_youtube_dl):
-        """Test that get_available_subtitles returns a dictionary."""
+        """Test that get_available_subtitles returns subtitles as first element of tuple."""
         # Mock yt-dlp to return subtitle info
         mock_instance = MagicMock()
         mock_youtube_dl.return_value.__enter__.return_value = mock_instance
@@ -24,7 +24,7 @@ class TestGetAvailableSubtitles:
         }
 
         downloader = VideoDownloader()
-        result = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
+        result, _ = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
 
         assert isinstance(result, dict)
         assert 'en' in result
@@ -48,7 +48,7 @@ class TestGetAvailableSubtitles:
         }
 
         downloader = VideoDownloader()
-        result = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
+        result, _ = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
 
         # Should only include manual subtitles
         assert 'en' in result
@@ -71,9 +71,85 @@ class TestGetAvailableSubtitles:
         }
 
         downloader = VideoDownloader()
-        result = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
+        result, _ = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
 
         assert result == {}
+
+
+class TestGetAvailableSubtitlesReturnsMeta:
+    """Tests that get_available_subtitles returns video metadata alongside subtitles."""
+
+    @patch('src.video_downloader.yt_dlp.YoutubeDL')
+    def test_returns_tuple_of_subtitles_and_meta(self, mock_youtube_dl):
+        """get_available_subtitles should return (subtitles_dict, video_meta_dict)."""
+        mock_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_instance
+        mock_instance.extract_info.return_value = {
+            'subtitles': {'en': [{'ext': 'srt'}]},
+            'automatic_captions': {},
+            'title': 'My Video',
+            'channel': 'My Channel',
+        }
+
+        downloader = VideoDownloader()
+        result = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
+
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        subtitles, meta = result
+        assert isinstance(subtitles, dict)
+        assert isinstance(meta, dict)
+
+    @patch('src.video_downloader.yt_dlp.YoutubeDL')
+    def test_meta_contains_title_and_channel(self, mock_youtube_dl):
+        """Video meta should contain title and channel fields."""
+        mock_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_instance
+        mock_instance.extract_info.return_value = {
+            'subtitles': {'en': [{'ext': 'srt'}]},
+            'automatic_captions': {},
+            'title': 'My Video Title',
+            'channel': 'Test Channel',
+        }
+
+        downloader = VideoDownloader()
+        _, meta = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
+
+        assert meta['title'] == 'My Video Title'
+        assert meta['channel'] == 'Test Channel'
+
+    @patch('src.video_downloader.yt_dlp.YoutubeDL')
+    def test_meta_handles_missing_channel(self, mock_youtube_dl):
+        """Video meta should handle missing channel gracefully."""
+        mock_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_instance
+        mock_instance.extract_info.return_value = {
+            'subtitles': {},
+            'automatic_captions': {},
+            'title': 'My Video Title',
+            # No channel field
+        }
+
+        downloader = VideoDownloader()
+        _, meta = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
+
+        assert meta['title'] == 'My Video Title'
+        assert meta['channel'] is None
+
+    @patch('src.video_downloader.yt_dlp.YoutubeDL')
+    def test_error_returns_empty_subtitles_and_empty_meta(self, mock_youtube_dl):
+        """On error, should return empty dict and empty meta."""
+        mock_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_instance
+        mock_instance.extract_info.side_effect = Exception("Network error")
+
+        downloader = VideoDownloader()
+        result = downloader.get_available_subtitles("https://youtube.com/watch?v=test")
+
+        assert isinstance(result, tuple)
+        subtitles, meta = result
+        assert subtitles == {}
+        assert meta == {}
 
 
 class TestDownloadSubtitle:
@@ -212,3 +288,38 @@ class TestGetVideoInfo:
         assert result['video_id'] == 'xyz789'
         assert result['duration'] == 300.0
         assert result['platform'] == 'youtube'
+
+    @patch('src.video_downloader.yt_dlp.YoutubeDL')
+    def test_get_video_info_includes_channel(self, mock_youtube_dl):
+        """Test that get_video_info returns channel field."""
+        mock_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_instance
+        mock_instance.extract_info.return_value = {
+            'title': 'Test Video',
+            'id': 'abc123',
+            'duration': 120.5,
+            'extractor': 'youtube',
+            'channel': 'Test Channel',
+        }
+
+        downloader = VideoDownloader()
+        result = downloader.get_video_info("https://youtube.com/watch?v=test")
+
+        assert result['channel'] == 'Test Channel'
+
+    @patch('src.video_downloader.yt_dlp.YoutubeDL')
+    def test_get_video_info_missing_channel_returns_none(self, mock_youtube_dl):
+        """Test that get_video_info handles missing channel gracefully."""
+        mock_instance = MagicMock()
+        mock_youtube_dl.return_value.__enter__.return_value = mock_instance
+        mock_instance.extract_info.return_value = {
+            'title': 'Test Video',
+            'id': 'abc123',
+            'duration': 120.5,
+            'extractor': 'youtube',
+        }
+
+        downloader = VideoDownloader()
+        result = downloader.get_video_info("https://youtube.com/watch?v=test")
+
+        assert result['channel'] is None

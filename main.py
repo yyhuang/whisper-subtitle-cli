@@ -171,6 +171,31 @@ def _build_translate_command(
     return ' '.join(parts)
 
 
+def format_video_label(video_meta: dict, url: str = None) -> str:
+    """
+    Format video label from metadata for display.
+
+    Args:
+        video_meta: Dict with 'title' and 'channel' keys
+        url: Optional URL to append in parentheses
+
+    Returns:
+        Formatted string like "Channel - Title (URL)" or "Title (URL)"
+    """
+    title = video_meta.get('title', 'Unknown')
+    channel = video_meta.get('channel')
+
+    if channel:
+        label = f"{channel} - {title}"
+    else:
+        label = title
+
+    if url:
+        label = f"{label} ({url})"
+
+    return label
+
+
 def get_output_directory(cli_output: str, config: dict, default_path: Path) -> Path:
     """
     Determine output directory with priority: CLI argument > config > default.
@@ -771,11 +796,14 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
             if not skip_subtitle_check:
                 # Check for available subtitles first
                 click.echo("\nChecking for available subtitles...", err=preview)
-                subtitles = downloader.get_available_subtitles(data_input)
+                subtitles, video_meta = downloader.get_available_subtitles(data_input)
                 subtitles_checked = True
                 subtitle_list = list(subtitles.items())
 
                 if subtitles:
+                    video_label = format_video_label(video_meta, data_input)
+                    click.echo(f"\nVideo: {video_label}", err=preview)
+
                     click.echo("\nAvailable subtitles:", err=preview)
                     for idx, (lang_code, info) in enumerate(subtitle_list, 1):
                         click.echo(f"  {idx}. {info['name']} ({lang_code})", err=preview)
@@ -792,6 +820,8 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                         )
                         if choice == 's':
                             return  # Skip: emit nothing to stdout
+                        comment = f"# {format_video_label(video_meta, data_input)}"
+                        click.echo(comment)
                         if choice == 0:
                             if config['ollama'].get('auto_unload', False):
                                 # Two-phase: transcribe first, translate separately (VRAM constraint)
@@ -882,6 +912,8 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                 else:
                     # No subtitles available
                     if preview:
+                        comment = f"# {format_video_label(video_meta, data_input)}"
+                        click.echo(comment)
                         if config['ollama'].get('auto_unload', False):
                             # Two-phase: transcribe first, translate separately (VRAM constraint)
                             video_info = downloader.get_video_info(data_input)
