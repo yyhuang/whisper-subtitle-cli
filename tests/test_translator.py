@@ -551,7 +551,7 @@ class TestBatchTranslation:
         """Test recursive batch splits in half when batch fails."""
         call_count = [0]
 
-        def mock_try_batch(segments, src, tgt):
+        def mock_try_batch(segments, src, tgt, context=None):
             call_count[0] += 1
             if len(segments) == 3:
                 return None  # Fail for full batch
@@ -628,7 +628,7 @@ class TestBatchTranslation:
 
         call_count = [0]
 
-        def mock_try_batch(segs, src, tgt):
+        def mock_try_batch(segs, src, tgt, context=None):
             call_count[0] += 1
             return [
                 {'start': s['start'], 'end': s['end'], 'text': f"T{i+1}"}
@@ -667,6 +667,222 @@ class TestBatchTranslation:
         assert len(progress_calls) > 0
         # Final call should show completion
         assert progress_calls[-1] == (3, 3)
+
+
+class TestContextWindow:
+    """Tests for sliding context window feature in batch translation."""
+
+    # ── 1. Config tests ──────────────────────────────────────────────────────
+
+    def test_load_config_default_context_lines(self):
+        """context_lines should default to 3 when not in config file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'config.json'
+            config_path.write_text(json.dumps({"ollama": {"model": "test"}}))
+
+            with patch('src.translator.Path') as mock_path_class:
+                mock_path_class.return_value.parent.parent.__truediv__.return_value = config_path
+                config = load_config()
+
+        assert config['ollama']['context_lines'] == 3
+
+    def test_load_config_custom_context_lines(self):
+        """context_lines in config file should override default."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / 'config.json'
+            config_path.write_text(json.dumps({"ollama": {"context_lines": 5}}))
+
+            with patch('src.translator.Path') as mock_path_class:
+                mock_path_class.return_value.parent.parent.__truediv__.return_value = config_path
+                config = load_config()
+
+        assert config['ollama']['context_lines'] == 5
+
+    def test_translator_init_context_lines_zero(self):
+        """context_lines=0 must be stored as 0, not treated as falsy."""
+        with patch('src.translator.load_config') as mock_config:
+            mock_config.return_value = {
+                'ollama': {
+                    'model': 'test',
+                    'base_url': 'http://localhost:11434',
+                    'batch_size': 50,
+                    'keep_alive': '10m',
+                    'context_lines': 0,
+                }
+            }
+            translator = OllamaTranslator()
+        assert translator.context_lines == 0
+
+    # ── 2. Prompt building tests ──────────────────────────────────────────────
+
+    def test_build_batch_prompt_no_context(self):
+        """Prompt is unchanged when context is None or empty."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=50)
+        texts = ['Hello', 'World']
+
+        prompt_none = translator._build_batch_prompt(texts, 'English', 'Chinese')
+        prompt_empty = translator._build_batch_prompt(texts, 'English', 'Chinese', context=[])
+
+        assert 'Previous translations' not in prompt_none
+        assert prompt_none == prompt_empty
+
+    def test_build_batch_prompt_with_context(self):
+        """Context block appears before the numbered lines."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=50)
+        context = [('Hello', '你好'), ('World', '世界')]
+        texts = ['Goodbye']
+
+        prompt = translator._build_batch_prompt(texts, 'English', 'Chinese', context=context)
+
+        assert 'Previous translations' in prompt
+        assert '1. Goodbye' in prompt
+        context_pos = prompt.index('Previous translations')
+        numbered_pos = prompt.index('1. Goodbye')
+        assert context_pos < numbered_pos
+
+    def test_build_batch_prompt_context_format(self):
+        """Context pairs must use exact `"orig" → "trans"` format."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=50)
+        context = [('Hello world', '你好世界'), ('How are you', '你好嗎')]
+        texts = ['Fine']
+
+        prompt = translator._build_batch_prompt(texts, 'English', 'Chinese', context=context)
+
+        assert '"Hello world" → "你好世界"' in prompt
+        assert '"How are you" → "你好嗎"' in prompt
+
+    # ── 3. Threading / call-chain tests ──────────────────────────────────────
+
+    def test_try_translate_batch_passes_context(self):
+        """_try_translate_batch must forward context to _build_batch_prompt."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=50)
+        segments = [{'start': 0.0, 'end': 1.0, 'text': 'Hello'}]
+        context = [('Hi', '嗨')]
+
+        mock_response = Mock()
+        mock_response.json.return_value = {'response': '1. 你好'}
+        mock_response.raise_for_status = Mock()
+
+        with patch.object(translator, '_build_batch_prompt', wraps=translator._build_batch_prompt) as mock_build:
+            with patch('src.translator.requests.post', return_value=mock_response):
+                translator._try_translate_batch(segments, 'English', 'Chinese', context=context)
+
+        mock_build.assert_called_once_with(['Hello'], 'English', 'Chinese', context=context)
+
+    def test_translate_batch_recursive_split_uses_original_context(self):
+        """Both halves of a recursive split get the same original context."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=50)
+        segments = [
+            {'start': 0.0, 'end': 1.0, 'text': 'A'},
+            {'start': 1.0, 'end': 2.0, 'text': 'B'},
+        ]
+        context = [('Prior', '先前')]
+        received_contexts = []
+
+        def mock_try_batch(segs, src, tgt, context=None):
+            received_contexts.append(context)
+            if len(segs) == 2:
+                return None  # force split
+            return [{'start': s['start'], 'end': s['end'], 'text': 'T'} for s in segs]
+
+        with patch.object(translator, '_try_translate_batch', side_effect=mock_try_batch):
+            translator._translate_batch_recursive(
+                segments, 'English', 'Chinese', context=context
+            )
+
+        # Full batch (fails) + left half + right half = 3 calls
+        assert len(received_contexts) == 3
+        # Every call must receive the original context unchanged
+        assert all(c == context for c in received_contexts)
+
+    # ── 4. Accumulation tests ─────────────────────────────────────────────────
+
+    def test_translate_segments_first_batch_empty_context(self):
+        """First batch must always receive an empty context list."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=3)
+        translator.context_lines = 3
+        segments = [{'start': 0.0, 'end': 1.0, 'text': 'Hello'}]
+        received_contexts = []
+
+        def mock_recursive(segs, src, tgt, progress_callback=None,
+                           progress_offset=0, total_segments=0, context=None):
+            received_contexts.append(context)
+            return [{'start': s['start'], 'end': s['end'], 'text': 'T'} for s in segs]
+
+        with patch.object(translator, '_translate_batch_recursive', side_effect=mock_recursive):
+            translator.translate_segments(segments, 'English', 'Chinese')
+
+        assert received_contexts[0] == []
+
+    def test_translate_segments_second_batch_gets_context(self):
+        """Second batch receives the tail of context accumulated from first batch."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=2)
+        translator.context_lines = 3
+        segments = [
+            {'start': 0.0, 'end': 1.0, 'text': 'One'},
+            {'start': 1.0, 'end': 2.0, 'text': 'Two'},
+            {'start': 2.0, 'end': 3.0, 'text': 'Three'},
+        ]
+        received_contexts = []
+
+        def mock_recursive(segs, src, tgt, progress_callback=None,
+                           progress_offset=0, total_segments=0, context=None):
+            received_contexts.append(list(context))
+            return [{'start': s['start'], 'end': s['end'], 'text': f"T_{s['text']}"} for s in segs]
+
+        with patch.object(translator, '_translate_batch_recursive', side_effect=mock_recursive):
+            translator.translate_segments(segments, 'English', 'Chinese')
+
+        assert received_contexts[0] == []
+        assert received_contexts[1] == [('One', 'T_One'), ('Two', 'T_Two')]
+
+    def test_translate_segments_context_lines_zero_disables(self):
+        """context_lines=0 passes empty context to every batch."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=2)
+        translator.context_lines = 0
+        segments = [
+            {'start': 0.0, 'end': 1.0, 'text': 'One'},
+            {'start': 1.0, 'end': 2.0, 'text': 'Two'},
+            {'start': 2.0, 'end': 3.0, 'text': 'Three'},
+        ]
+        received_contexts = []
+
+        def mock_recursive(segs, src, tgt, progress_callback=None,
+                           progress_offset=0, total_segments=0, context=None):
+            received_contexts.append(list(context))
+            return [{'start': s['start'], 'end': s['end'], 'text': 'T'} for s in segs]
+
+        with patch.object(translator, '_translate_batch_recursive', side_effect=mock_recursive):
+            translator.translate_segments(segments, 'English', 'Chinese')
+
+        assert all(c == [] for c in received_contexts)
+
+    def test_translate_segments_context_sliced_to_context_lines(self):
+        """Context passed to each batch is limited to last context_lines pairs."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=1)
+        translator.context_lines = 2
+        segments = [
+            {'start': float(i), 'end': float(i + 1), 'text': f'S{i}'}
+            for i in range(4)
+        ]
+        received_contexts = []
+
+        def mock_recursive(segs, src, tgt, progress_callback=None,
+                           progress_offset=0, total_segments=0, context=None):
+            received_contexts.append(list(context))
+            return [{'start': s['start'], 'end': s['end'], 'text': f"T_{s['text']}"} for s in segs]
+
+        with patch.object(translator, '_translate_batch_recursive', side_effect=mock_recursive):
+            translator.translate_segments(segments, 'English', 'Chinese')
+
+        # Batch 0: no prior results
+        assert received_contexts[0] == []
+        # Batch 1: only the 1 result so far (< context_lines)
+        assert received_contexts[1] == [('S0', 'T_S0')]
+        # Batch 2: last 2 results
+        assert received_contexts[2] == [('S0', 'T_S0'), ('S1', 'T_S1')]
+        # Batch 3: last 2 results (window slides)
+        assert received_contexts[3] == [('S1', 'T_S1'), ('S2', 'T_S2')]
 
 
 class TestUnloadAllModels:

@@ -56,7 +56,8 @@ Settings are configured in `config.json` at the project root.
     "base_url": "http://localhost:11434",
     "batch_size": 50,
     "keep_alive": "10m",
-    "auto_unload": false
+    "auto_unload": false,
+    "context_lines": 3
   },
   "output": {
     "directory": "/path/to/subtitles"
@@ -74,6 +75,7 @@ Settings are configured in `config.json` at the project root.
 - **model**: The Ollama model to use for translation (default: `translategemma:4b`)
 - **base_url**: Ollama API URL, can point to remote Ollama server (default: `http://localhost:11434`)
 - **batch_size**: Number of segments to translate per API call (default: `50`)
+- **context_lines**: Number of prior translated segment pairs to include as read-only context in each batch prompt (default: `3`, set `0` to disable). Helps maintain consistency in pronouns, terminology, and tone across batch boundaries.
 - **keep_alive**: How long to keep the model loaded in memory after a request (default: `10m`)
   - `"5m"`, `"10m"`, `"1h"` - duration values
   - `"-1"` - keep loaded indefinitely
@@ -265,6 +267,7 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - `--action` flag to separate transcribe/translate steps (see `plan/finished/PLAN-action-flag.md`)
 - `S. Skip this video` option in the subtitle selection menu — preview mode emits nothing (video absent from batch script), interactive mode exits cleanly
 - Channel name + video title shown in subtitle menu header and as `# comment` in `--preview` output
+- Sliding context window for translation — `ollama.context_lines` (default 3) passes last N translated pairs as read-only context between batches (see `plan/PLAN-sliding-context-window.md`)
 
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
@@ -274,7 +277,5 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Web interface
 
 ### Next Session
-- No active work in progress. All planned features complete.
-- Pick up from Future enhancements above, or start a new feature.
-- Run `uv run pytest -v` to verify clean state (193 passed, 7 skipped as of last session).
+- Run `uv run pytest -v` to verify clean state (205 passed, 7 skipped as of last session)
 - The 7 skipped tests are `stable-ts` related — they skip automatically when `stable-ts` is not installed (optional dep). Run `uv sync --extra stable` to enable them.

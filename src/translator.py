@@ -163,7 +163,8 @@ def load_config() -> dict:
             "base_url": "http://localhost:11434",
             "batch_size": 50,
             "keep_alive": "10m",
-            "auto_unload": False
+            "auto_unload": False,
+            "context_lines": 3
         },
         "output": {
             "directory": None  # None means use default locations
@@ -187,7 +188,8 @@ def load_config() -> dict:
 class OllamaTranslator:
     """Translator using local Ollama API for subtitle translation with batch processing."""
 
-    def __init__(self, model: str = None, base_url: str = None, batch_size: int = None, keep_alive: str = None):
+    def __init__(self, model: str = None, base_url: str = None, batch_size: int = None,
+                 keep_alive: str = None, context_lines: int = None):
         """
         Initialize the translator with Ollama settings.
 
@@ -196,12 +198,14 @@ class OllamaTranslator:
             base_url: Ollama API base URL. Loads from config if not provided.
             batch_size: Number of segments per batch. Loads from config if not provided.
             keep_alive: How long to keep model loaded (e.g., '10m', '1h', '-1'). Loads from config if not provided.
+            context_lines: Number of prior translated pairs to pass as context (0 disables). Loads from config if not provided.
         """
         config = load_config()
         self.model = model or config['ollama']['model']
         self.base_url = base_url or config['ollama']['base_url']
         self.batch_size = batch_size or config['ollama'].get('batch_size', 50)
         self.keep_alive = keep_alive or config['ollama'].get('keep_alive', '10m')
+        self.context_lines = context_lines if context_lines is not None else config['ollama'].get('context_lines', 3)
 
     def _is_translategemma(self) -> bool:
         """Check if the current model is TranslateGemma."""
@@ -334,7 +338,8 @@ class OllamaTranslator:
         self,
         texts: List[str],
         source_lang: str,
-        target_lang: str
+        target_lang: str,
+        context: Optional[List[Tuple[str, str]]] = None
     ) -> str:
         """
         Build a prompt for batch translation.
@@ -343,6 +348,7 @@ class OllamaTranslator:
             texts: List of texts to translate
             source_lang: Source language
             target_lang: Target language
+            context: Optional list of (original, translation) pairs from previous batches
 
         Returns:
             Formatted prompt string
@@ -359,6 +365,12 @@ class OllamaTranslator:
         source_prompt = get_prompt_language(source_lang)
         target_prompt = get_prompt_language(target_lang)
 
+        # Build context block if provided
+        context_block = ""
+        if context:
+            pairs = "\n".join(f'"{orig}" → "{trans}"' for orig, trans in context)
+            context_block = f"[Previous translations for context — do not re-translate these:]\n{pairs}\n\n"
+
         if self._is_translategemma():
             source_code = get_language_code(source_lang)
             target_code = get_language_code(target_lang)
@@ -366,12 +378,12 @@ class OllamaTranslator:
 
 Translate each numbered line below. Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}
 
-{numbered_lines}"""
+{context_block}{numbered_lines}"""
         else:
             prompt = f"""Translate each line from {source_prompt} to {target_prompt}.
 Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}
 
-{numbered_lines}"""
+{context_block}{numbered_lines}"""
 
         return prompt
 
@@ -417,7 +429,8 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
         self,
         segments: List[Dict],
         source_lang: str,
-        target_lang: str
+        target_lang: str,
+        context: Optional[List[Tuple[str, str]]] = None
     ) -> Optional[List[Dict]]:
         """
         Try to translate a batch of segments.
@@ -426,6 +439,7 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
             segments: List of segments to translate
             source_lang: Source language
             target_lang: Target language
+            context: Optional list of (original, translation) pairs for context
 
         Returns:
             List of translated segments if successful, None if failed
@@ -434,7 +448,7 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
             return []
 
         texts = [seg['text'] for seg in segments]
-        prompt = self._build_batch_prompt(texts, source_lang, target_lang)
+        prompt = self._build_batch_prompt(texts, source_lang, target_lang, context=context)
 
         # Longer timeout for batches
         timeout = max(120, len(segments) * 5)
@@ -466,7 +480,8 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
         target_lang: str,
         progress_callback: Optional[callable] = None,
         progress_offset: int = 0,
-        total_segments: int = 0
+        total_segments: int = 0,
+        context: Optional[List[Tuple[str, str]]] = None
     ) -> List[Dict]:
         """
         Recursively translate segments with split-on-failure strategy.
@@ -478,6 +493,7 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
             progress_callback: Optional callback for progress updates
             progress_offset: Current position in overall translation
             total_segments: Total number of segments being translated
+            context: Optional list of (original, translation) pairs for context
 
         Returns:
             List of translated segments
@@ -486,7 +502,7 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
             return []
 
         # Try to translate the batch
-        result = self._try_translate_batch(segments, source_lang, target_lang)
+        result = self._try_translate_batch(segments, source_lang, target_lang, context=context)
 
         if result is not None:
             # Success - update progress and return
@@ -510,7 +526,8 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
                 'text': translated_text
             }]
 
-        # Recursive case: split in half and try each
+        # Recursive case: split in half and try each.
+        # Both halves get the same original context (siblings do not share results).
         mid = len(segments) // 2
 
         left = self._translate_batch_recursive(
@@ -519,7 +536,8 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
             target_lang,
             progress_callback,
             progress_offset,
-            total_segments
+            total_segments,
+            context=context
         )
 
         right = self._translate_batch_recursive(
@@ -528,7 +546,8 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
             target_lang,
             progress_callback,
             progress_offset + mid,
-            total_segments
+            total_segments,
+            context=context
         )
 
         return left + right
@@ -563,11 +582,15 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
 
         total = len(segments)
         translated_segments = []
+        context: List[Tuple[str, str]] = []  # accumulates (original, translated) pairs
 
         # Process in batches
         for batch_start in range(0, total, self.batch_size):
             batch_end = min(batch_start + self.batch_size, total)
             batch = segments[batch_start:batch_end]
+
+            # Slice last context_lines pairs; empty list when context_lines=0
+            batch_context = context[-self.context_lines:] if self.context_lines > 0 else []
 
             batch_result = self._translate_batch_recursive(
                 batch,
@@ -575,8 +598,13 @@ Return ONLY the translations with the same line numbers. Keep the exact format "
                 target_lang,
                 progress_callback,
                 batch_start,
-                total
+                total,
+                context=batch_context
             )
+
+            # Accumulate context from completed batch
+            for orig_seg, trans_seg in zip(batch, batch_result):
+                context.append((orig_seg['text'], trans_seg['text']))
 
             translated_segments.extend(batch_result)
 
