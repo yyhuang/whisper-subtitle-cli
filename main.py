@@ -912,6 +912,21 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                 else:
                     # No subtitles available
                     if preview:
+                        video_label = format_video_label(video_meta, data_input)
+                        click.echo(f"\nVideo: {video_label}", err=True)
+                        click.echo(f"\nNo subtitles available.", err=True)
+                        click.echo(f"  0. Transcribe video", err=True)
+                        click.echo(f"  S. Skip this video", err=True)
+
+                        choice = click.prompt(
+                            "\nTranscribe or skip? (0 or S)",
+                            type=SubtitleChoice(0),
+                            default='0',
+                            err=True,
+                        )
+                        if choice == 's':
+                            return  # Skip: emit nothing to stdout
+
                         comment = f"# {format_video_label(video_meta, data_input)}"
                         click.echo(comment)
                         if config['ollama'].get('auto_unload', False):

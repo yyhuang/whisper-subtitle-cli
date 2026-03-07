@@ -351,6 +351,8 @@ uv run python main.py 'https://youtube.com/watch?v=VIDEO_ID' --subtitle 0 --acti
 uv run python main.py '/path/to/20200101_VIDEO_ID.srt' -y --action translate
 ```
 
+When **no subtitles are found**, you're prompted to transcribe or skip (useful for skipping videos that don't need transcription, e.g., Chinese videos you already understand).
+
 Informational messages (subtitle list, prompt) go to stderr, so only the command(s) reach stdout.
 
 **Two-pass workflow** for a batch of URLs:

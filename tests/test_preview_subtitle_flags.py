@@ -358,6 +358,7 @@ class TestPreviewFlag:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0, result.output
@@ -569,6 +570,7 @@ class TestPreviewTwoPhaseWorkflow:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0, result.output
@@ -590,6 +592,7 @@ class TestPreviewTwoPhaseWorkflow:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0
@@ -613,6 +616,7 @@ class TestPreviewTwoPhaseWorkflow:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0
@@ -637,6 +641,7 @@ class TestPreviewTwoPhaseWorkflow:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0
@@ -746,6 +751,7 @@ class TestPreviewTwoPhaseWorkflow:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview', '--output', '/tmp/subs'],
+            input='0\n',
         )
 
         assert result.exit_code == 0
@@ -769,6 +775,7 @@ class TestPreviewTwoPhaseWorkflow:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview', '--language', 'en'],
+            input='0\n',
         )
 
         assert result.exit_code == 0
@@ -809,6 +816,7 @@ class TestPreviewSingleCommandWhenAutoUnloadDisabled:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0, result.output
@@ -900,6 +908,7 @@ class TestActionFlagInPreviewCommands:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0, result.output
@@ -922,6 +931,7 @@ class TestActionFlagInPreviewCommands:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0, result.output
@@ -1163,6 +1173,7 @@ class TestChannelTitleInPreviewOutput:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0, result.output
@@ -1191,6 +1202,7 @@ class TestChannelTitleInPreviewOutput:
         result = runner.invoke(
             main.main,
             ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
         )
 
         assert result.exit_code == 0, result.output
@@ -1224,3 +1236,124 @@ class TestChannelTitleInPreviewOutput:
         # The comment should NOT appear when skipping
         comments = self._get_comment_lines(result.output)
         assert len(comments) == 0
+
+
+class TestPreviewNoSubtitlesPrompt:
+    """When --preview and no subtitles found, show title and prompt to transcribe or skip."""
+
+    def _make_config(self, auto_unload=False):
+        return {
+            'ollama': {
+                'model': 'translategemma:4b',
+                'base_url': 'http://localhost:11434',
+                'batch_size': 50,
+                'keep_alive': '10m',
+                'auto_unload': auto_unload,
+            },
+            'output': {'directory': None},
+        }
+
+    def _setup_no_subtitles(self, mock_downloader):
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            {},
+            {'title': 'Chinese Video', 'channel': 'My Channel'},
+        )
+        mock_instance.get_video_info.return_value = {
+            'video_id': 'abc123',
+            'upload_date': '20200101',
+        }
+        return mock_instance
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_no_subtitles_shows_prompt(self, mock_downloader, mock_config):
+        """Preview with no subtitles should prompt user instead of auto-transcribing."""
+        mock_config.return_value = self._make_config()
+        self._setup_no_subtitles(mock_downloader)
+        runner = CliRunner()
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        # Should show the video label
+        assert 'Chinese Video' in result.output or 'My Channel' in result.output
+        # Should show transcribe option
+        assert 'Transcribe' in result.output
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_no_subtitles_choose_transcribe(self, mock_downloader, mock_config):
+        """Preview with no subtitles, user chooses 0 to transcribe."""
+        mock_config.return_value = self._make_config()
+        self._setup_no_subtitles(mock_downloader)
+        runner = CliRunner()
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        assert '--subtitle 0' in result.output
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_no_subtitles_choose_skip(self, mock_downloader, mock_config):
+        """Preview with no subtitles, user chooses S to skip."""
+        mock_config.return_value = self._make_config()
+        self._setup_no_subtitles(mock_downloader)
+        runner = CliRunner()
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='s\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        # No command should be emitted
+        assert 'uv run python main.py' not in result.output
+        # No comment either
+        assert not any(l.startswith('#') for l in result.output.strip().split('\n') if l.strip())
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_no_subtitles_default_is_transcribe(self, mock_downloader, mock_config):
+        """Preview with no subtitles, pressing Enter (default 0) should transcribe."""
+        mock_config.return_value = self._make_config()
+        self._setup_no_subtitles(mock_downloader)
+        runner = CliRunner()
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        assert '--subtitle 0' in result.output
+
+    @patch('main.load_config')
+    @patch('main.VideoDownloader')
+    def test_no_subtitles_two_phase_transcribe(self, mock_downloader, mock_config):
+        """Preview with no subtitles + auto_unload, user chooses 0 should emit two-phase."""
+        mock_config.return_value = self._make_config(auto_unload=True)
+        self._setup_no_subtitles(mock_downloader)
+        runner = CliRunner()
+
+        result = runner.invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview'],
+            input='0\n',
+        )
+
+        assert result.exit_code == 0, result.output
+        assert '--action transcribe' in result.output
+        assert '--action translate' in result.output

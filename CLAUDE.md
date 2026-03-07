@@ -268,6 +268,7 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - `S. Skip this video` option in the subtitle selection menu — preview mode emits nothing (video absent from batch script), interactive mode exits cleanly
 - Channel name + video title shown in subtitle menu header and as `# comment` in `--preview` output
 - Sliding context window for translation — `ollama.context_lines` (default 3) passes last N translated pairs as read-only context between batches (see `plan/PLAN-sliding-context-window.md`)
+- `--preview` with no subtitles now prompts to transcribe or skip (instead of auto-transcribing), so users can skip videos that don't need transcription (e.g., Chinese videos)
 
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
@@ -277,5 +278,6 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Web interface
 
 ### Next Session
-- Run `uv run pytest -v` to verify clean state (205 passed, 7 skipped as of last session)
+- Run `uv run pytest -v` to verify clean state (210 passed, 7 skipped as of last session)
 - The 7 skipped tests are `stable-ts` related — they skip automatically when `stable-ts` is not installed (optional dep). Run `uv sync --extra stable` to enable them.
+- `config.json` has uncommitted local changes (user's personal model/output settings) — leave as-is
