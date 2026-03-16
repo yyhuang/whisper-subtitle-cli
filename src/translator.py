@@ -189,7 +189,7 @@ class OllamaTranslator:
     """Translator using local Ollama API for subtitle translation with batch processing."""
 
     def __init__(self, model: str = None, base_url: str = None, batch_size: int = None,
-                 keep_alive: str = None, context_lines: int = None):
+                 keep_alive: str = None, context_lines: int = None, custom_prompt: str = None):
         """
         Initialize the translator with Ollama settings.
 
@@ -199,6 +199,7 @@ class OllamaTranslator:
             batch_size: Number of segments per batch. Loads from config if not provided.
             keep_alive: How long to keep model loaded (e.g., '10m', '1h', '-1'). Loads from config if not provided.
             context_lines: Number of prior translated pairs to pass as context (0 disables). Loads from config if not provided.
+            custom_prompt: Extra instructions to include in translation prompts (e.g., glossary, style guide).
         """
         config = load_config()
         self.model = model or config['ollama']['model']
@@ -206,6 +207,7 @@ class OllamaTranslator:
         self.batch_size = batch_size or config['ollama'].get('batch_size', 50)
         self.keep_alive = keep_alive or config['ollama'].get('keep_alive', '10m')
         self.context_lines = context_lines if context_lines is not None else config['ollama'].get('context_lines', 3)
+        self.custom_prompt = custom_prompt
 
     def _is_translategemma(self) -> bool:
         """Check if the current model is TranslateGemma."""
@@ -290,7 +292,9 @@ class OllamaTranslator:
 
         delimiter_instruction = ' Keep " || " delimiters in the same positions.' if has_delimiter else ''
 
-        return f"""You are a professional {source_prompt} ({source_code}) to {target_prompt} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_prompt} text while adhering to {target_prompt} grammar, vocabulary, and cultural sensitivities. Produce only the {target_prompt} translation, without any additional explanations or commentary.{delimiter_instruction}
+        custom_block = f"\n\n[Additional instructions:]\n{self.custom_prompt}" if self.custom_prompt else ''
+
+        return f"""You are a professional {source_prompt} ({source_code}) to {target_prompt} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_prompt} text while adhering to {target_prompt} grammar, vocabulary, and cultural sensitivities. Produce only the {target_prompt} translation, without any additional explanations or commentary.{delimiter_instruction}{custom_block}
 
 {text}"""
 
@@ -321,10 +325,11 @@ class OllamaTranslator:
         else:
             source_prompt = get_prompt_language(source_lang)
             target_prompt = get_prompt_language(target_lang)
+            custom_block = f"\n\n[Additional instructions:]\n{self.custom_prompt}" if self.custom_prompt else ''
             if has_linebreaks:
-                prompt = f"Translate the following from {source_prompt} to {target_prompt}. Only output the translation. Keep \" || \" delimiters in the same positions:\n\n{text}"
+                prompt = f"Translate the following from {source_prompt} to {target_prompt}. Only output the translation. Keep \" || \" delimiters in the same positions:{custom_block}\n\n{text}"
             else:
-                prompt = f"Translate the following from {source_prompt} to {target_prompt}. Only output the translation, nothing else:\n\n{text}"
+                prompt = f"Translate the following from {source_prompt} to {target_prompt}. Only output the translation, nothing else:{custom_block}\n\n{text}"
 
         result = self._call_ollama(prompt, timeout=60)
 
@@ -371,17 +376,19 @@ class OllamaTranslator:
             pairs = "\n".join(f'"{orig}" → "{trans}"' for orig, trans in context)
             context_block = f"[Previous translations for context — do not re-translate these:]\n{pairs}\n\n"
 
+        custom_block = f"\n\n[Additional instructions:]\n{self.custom_prompt}" if self.custom_prompt else ''
+
         if self._is_translategemma():
             source_code = get_language_code(source_lang)
             target_code = get_language_code(target_lang)
             prompt = f"""You are a professional {source_prompt} ({source_code}) to {target_prompt} ({target_code}) translator. Your goal is to accurately convey the meaning and nuances of the original {source_prompt} text while adhering to {target_prompt} grammar, vocabulary, and cultural sensitivities.
 
-Translate each numbered line below. Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}
+Translate each numbered line below. Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}{custom_block}
 
 {context_block}{numbered_lines}"""
         else:
             prompt = f"""Translate each line from {source_prompt} to {target_prompt}.
-Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}
+Return ONLY the translations with the same line numbers. Keep the exact format "N. translation".{delimiter_instruction}{custom_block}
 
 {context_block}{numbered_lines}"""
 

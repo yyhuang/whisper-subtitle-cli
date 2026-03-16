@@ -885,6 +885,84 @@ class TestContextWindow:
         assert received_contexts[3] == [('S1', 'T_S1'), ('S2', 'T_S2')]
 
 
+class TestCustomPrompt:
+    """Tests for custom prompt file support in translation."""
+
+    def test_translator_init_custom_prompt_none_by_default(self):
+        """custom_prompt defaults to None when not provided."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=50)
+        assert translator.custom_prompt is None
+
+    def test_translator_init_custom_prompt_from_arg(self):
+        """custom_prompt can be set via constructor argument."""
+        translator = OllamaTranslator(
+            model='test', base_url='http://localhost:11434', batch_size=50,
+            custom_prompt='Use formal tone. Translate "pod" as Pod.'
+        )
+        assert translator.custom_prompt == 'Use formal tone. Translate "pod" as Pod.'
+
+    def test_build_batch_prompt_includes_custom_prompt(self):
+        """Custom prompt text appears in batch prompt."""
+        translator = OllamaTranslator(
+            model='test', base_url='http://localhost:11434', batch_size=50,
+            custom_prompt='Always use formal tone.'
+        )
+        texts = ['Hello', 'World']
+        prompt = translator._build_batch_prompt(texts, 'English', 'Chinese')
+
+        assert 'Always use formal tone.' in prompt
+        assert '1. Hello' in prompt
+
+    def test_build_batch_prompt_no_custom_prompt(self):
+        """Prompt is unchanged when custom_prompt is None."""
+        translator = OllamaTranslator(model='test', base_url='http://localhost:11434', batch_size=50)
+        texts = ['Hello']
+        prompt = translator._build_batch_prompt(texts, 'English', 'Chinese')
+
+        assert 'Additional instructions' not in prompt
+
+    def test_build_translategemma_prompt_includes_custom_prompt(self):
+        """Custom prompt text appears in TranslateGemma single-text prompt."""
+        translator = OllamaTranslator(
+            model='translategemma:4b', base_url='http://localhost:11434', batch_size=50,
+            custom_prompt='Translate "container" as 容器.'
+        )
+        prompt = translator._build_translategemma_prompt('Hello', 'English', 'Chinese')
+
+        assert 'Translate "container" as 容器.' in prompt
+        assert 'Hello' in prompt
+
+    def test_translate_text_non_translategemma_includes_custom_prompt(self):
+        """Custom prompt appears in non-TranslateGemma single-text prompt."""
+        translator = OllamaTranslator(
+            model='llama3:8b', base_url='http://localhost:11434', batch_size=50,
+            custom_prompt='Use casual tone.'
+        )
+
+        mock_response = Mock()
+        mock_response.json.return_value = {'response': 'translated'}
+        mock_response.raise_for_status = Mock()
+
+        with patch('src.translator.requests.post', return_value=mock_response) as mock_post:
+            translator.translate_text('Hello', 'English', 'Chinese')
+
+        sent_prompt = mock_post.call_args[1]['json']['prompt']
+        assert 'Use casual tone.' in sent_prompt
+
+    def test_build_batch_prompt_custom_prompt_before_numbered_lines(self):
+        """Custom prompt should appear before the numbered lines to translate."""
+        translator = OllamaTranslator(
+            model='test', base_url='http://localhost:11434', batch_size=50,
+            custom_prompt='Glossary: API=介面'
+        )
+        texts = ['Hello']
+        prompt = translator._build_batch_prompt(texts, 'English', 'Chinese')
+
+        custom_pos = prompt.index('Glossary: API=介面')
+        numbered_pos = prompt.index('1. Hello')
+        assert custom_pos < numbered_pos
+
+
 class TestUnloadAllModels:
     """Tests for the unload_all_models function."""
 

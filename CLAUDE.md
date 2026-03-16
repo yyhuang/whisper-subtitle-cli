@@ -96,6 +96,7 @@ Settings are configured in `config.json` at the project root.
 - `--check-system`: Display system diagnostics (GPU, CUDA, ffmpeg, Ollama)
 - `--stable`: Use stable-ts for better timestamp accuracy (requires: `uv sync --extra stable`)
 - `--vad`: Enable VAD to reduce hallucinations in silence (requires: `--stable`)
+- `--prompt-file`: Path to a text file with extra instructions for the translation model (e.g., glossary, style guide)
 - `--action`: Action to perform: `transcribe` (skip translation entirely) or `translate` (SRT input only, skip transcription). Default: both (prompt for translation after transcribing)
   - `--action transcribe` — transcribe only, no translation prompt
   - `--action translate` — requires SRT file as input, goes directly to translation
@@ -269,6 +270,7 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Channel name + video title shown in subtitle menu header and as `# comment` in `--preview` output
 - Sliding context window for translation — `ollama.context_lines` (default 3) passes last N translated pairs as read-only context between batches (see `plan/PLAN-sliding-context-window.md`)
 - `--preview` with no subtitles now prompts to transcribe or skip (instead of auto-transcribing), so users can skip videos that don't need transcription (e.g., Chinese videos)
+- `--prompt-file` flag for custom translation instructions (glossary, style guide, terminology) — injected as `[Additional instructions:]` block in all translation prompts
 
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
@@ -278,6 +280,9 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Web interface
 
 ### Next Session
-- Run `uv run pytest -v` to verify clean state (210 passed, 7 skipped as of last session)
+- Run `uv run pytest -v` to verify clean state (217 passed, 7 skipped as of last session)
 - The 7 skipped tests are `stable-ts` related — they skip automatically when `stable-ts` is not installed (optional dep). Run `uv sync --extra stable` to enable them.
 - `config.json` has uncommitted local changes (user's personal model/output settings) — leave as-is
+- `scripts/` directory moved to `~/claude/automation-scripts/` (separate repo, shared env.sh pattern for cron-friendly absolute paths). The old `scripts/` is gitignored and removed from this project.
+- `.gitignore` has an uncommitted change adding `scripts/` — can be committed or left as-is (the directory no longer exists here)
+- Consider adding `ollama.prompt_file` config option as an alternative to CLI flag (not yet implemented)

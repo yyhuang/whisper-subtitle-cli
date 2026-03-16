@@ -104,6 +104,9 @@ uv run python main.py video.mp4 --action transcribe
 # Translate an existing SRT directly — skip download/transcription
 uv run python main.py existing.srt --action translate -y
 
+# Use a custom prompt file for translation (glossary, style guide, etc.)
+uv run python main.py video.mp4 --prompt-file glossary.txt
+
 # Preview mode: check subtitles, ask user, print the real command, then exit
 uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview
 
@@ -319,6 +322,27 @@ uv run python main.py 20260123_video.srt --action translate -y
 # Error: --action translate requires an SRT file
 uv run python main.py video.mp4 --action translate  # exits with error
 ```
+
+### The `--prompt-file` Flag
+
+Use `--prompt-file` to provide extra instructions to the translation model. The file can contain anything: a glossary, style guide, tone preferences, or domain-specific terminology.
+
+```bash
+# Create a prompt file
+cat > glossary.txt << 'EOF'
+Translate technical terms as follows:
+- "container" → 容器
+- "pod" → Pod (keep English)
+- "node" → 節點
+Use formal tone throughout.
+EOF
+
+# Use it during translation
+uv run python main.py video.mp4 --prompt-file glossary.txt
+uv run python main.py existing.srt --prompt-file glossary.txt -y
+```
+
+The file contents are injected into every translation prompt sent to Ollama, so the model follows your instructions for every segment.
 
 ### Batch Scripting (`--preview` and `--subtitle`)
 

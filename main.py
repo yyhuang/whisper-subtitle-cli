@@ -276,7 +276,7 @@ def create_bilingual_segments(original_segments, translated_segments):
     return bilingual
 
 
-def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=False, language_name=None):
+def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=False, language_name=None, custom_prompt=None):
     """
     Handle subtitle translation workflow.
 
@@ -327,7 +327,7 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, 
     click.echo(f"\nUsing Ollama model: {model_name}")
 
     # Check Ollama connection
-    translator = OllamaTranslator()
+    translator = OllamaTranslator(custom_prompt=custom_prompt)
     if not translator.check_connection():
         click.echo(
             f"\n❌ Cannot connect to Ollama at {config['ollama']['base_url']}. "
@@ -378,7 +378,7 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, 
         return None
 
 
-def handle_srt_translation(srt_path: str, output: str, config: dict, yes: bool = False, language_name: str = None):
+def handle_srt_translation(srt_path: str, output: str, config: dict, yes: bool = False, language_name: str = None, custom_prompt: str = None):
     """
     Handle translation of an existing SRT file.
 
@@ -425,7 +425,7 @@ def handle_srt_translation(srt_path: str, output: str, config: dict, yes: bool =
         base_name = rest
 
     # Go directly to translation
-    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
+    translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name, custom_prompt=custom_prompt)
 
     click.echo("\n✅ Done!")
 
@@ -709,7 +709,13 @@ def run_system_check():
     default=None,
     help='Action to perform: transcribe (no translation), translate (SRT input only). Default: both.'
 )
-def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad, subtitle, preview, action):
+@click.option(
+    '--prompt-file',
+    type=click.Path(exists=True),
+    default=None,
+    help='Text file with extra instructions for the translation model (e.g., glossary, style guide).'
+)
+def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad, subtitle, preview, action, prompt_file):
     """
     Extract subtitles from DATA_INPUT (file path, URL, or SRT file) using AI transcription.
 
@@ -759,6 +765,13 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
             language_name = None
             language_code = None
 
+        # Read custom prompt file if provided
+        custom_prompt = None
+        if prompt_file:
+            custom_prompt = Path(prompt_file).read_text().strip()
+            if custom_prompt:
+                click.echo(f"Using prompt file: {prompt_file}", err=preview)
+
         # --action translate requires SRT input
         if action == 'translate' and not is_srt_file(data_input):
             click.echo(
@@ -774,7 +787,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                 cmd = _build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad)
                 click.echo(cmd)
                 return
-            handle_srt_translation(data_input, output, config, yes=yes, language_name=language_name)
+            handle_srt_translation(data_input, output, config, yes=yes, language_name=language_name, custom_prompt=custom_prompt)
             return
 
         # Step 0: Handle URL vs file path
@@ -894,7 +907,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                         download_language_name = parsed_sub_lang[0] if parsed_sub_lang else selected_name
 
                         # Offer translation
-                        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=download_language_name)
+                        translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=download_language_name, custom_prompt=custom_prompt)
 
                         click.echo("\n✅ Done! Subtitle download complete.")
                         click.echo(f"\nOutput files saved to:")
@@ -1042,7 +1055,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
         if action == 'transcribe':
             translation_time = None
         else:
-            translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name)
+            translation_time = translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, config, yes=yes, language_name=language_name, custom_prompt=custom_prompt)
 
         # Clean up audio file if not keeping it
         if not keep_audio and audio_path.exists():
