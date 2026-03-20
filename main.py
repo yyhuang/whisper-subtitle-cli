@@ -97,6 +97,7 @@ def _build_preview_command(
     keep_audio: bool,
     stable: bool,
     vad: bool,
+    prompt_file: str | None = None,
 ) -> str:
     """Build the real command for --preview mode output (subtitle download paths)."""
     import shlex
@@ -117,6 +118,8 @@ def _build_preview_command(
         parts.append('--stable')
     if vad:
         parts.append('--vad')
+    if prompt_file is not None:
+        parts.append(f'--prompt-file {shlex.quote(prompt_file)}')
 
     return ' '.join(parts)
 
@@ -157,6 +160,7 @@ def _build_translate_command(
     srt_path: str,
     output: str | None,
     language: str | None,
+    prompt_file: str | None = None,
 ) -> str:
     """Build Phase 2 translation command (SRT file + -y + --action translate)."""
     import shlex
@@ -167,6 +171,8 @@ def _build_translate_command(
         parts.append(f'--language {language}')
     if output is not None:
         parts.append(f'--output {shlex.quote(output)}')
+    if prompt_file is not None:
+        parts.append(f'--prompt-file {shlex.quote(prompt_file)}')
 
     return ' '.join(parts)
 
@@ -784,7 +790,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
         # Handle SRT file input - skip to translation
         if is_srt_file(data_input):
             if preview:
-                cmd = _build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad)
+                cmd = _build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad, prompt_file=prompt_file)
                 click.echo(cmd)
                 return
             handle_srt_translation(data_input, output, config, yes=yes, language_name=language_name, custom_prompt=custom_prompt)
@@ -844,11 +850,11 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                                 output_dir = get_output_directory(output, config, Path.cwd())
                                 srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
                                 click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
-                                click.echo(_build_translate_command(srt_path, output, language))
+                                click.echo(_build_translate_command(srt_path, output, language, prompt_file=prompt_file))
                             else:
                                 click.echo(_build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad))
                         else:
-                            cmd = _build_preview_command(data_input, choice, model, language, output, keep_audio, stable, vad)
+                            cmd = _build_preview_command(data_input, choice, model, language, output, keep_audio, stable, vad, prompt_file=prompt_file)
                             click.echo(cmd)
                         return
                     elif subtitle is not None:
@@ -950,7 +956,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                             output_dir = get_output_directory(output, config, Path.cwd())
                             srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
                             click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
-                            click.echo(_build_translate_command(srt_path, output, language))
+                            click.echo(_build_translate_command(srt_path, output, language, prompt_file=prompt_file))
                         else:
                             click.echo(_build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad))
                         return
@@ -999,7 +1005,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                     output_dir = get_output_directory(output, config, video_path.parent)
                     srt_path = str(output_dir / f"{date_prefix}_{base_name}.srt")
                     click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
-                    click.echo(_build_translate_command(srt_path, output, language))
+                    click.echo(_build_translate_command(srt_path, output, language, prompt_file=prompt_file))
                 else:
                     click.echo(_build_preview_command(data_input, 0, model, language, output, keep_audio, stable, vad))
                 return

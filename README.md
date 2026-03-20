@@ -401,7 +401,7 @@ Notes:
 - Subtitle download paths (choice > 0) output **one command** with `-y` (no GPU used)
 - Enter **`S` to skip** a video — no command is emitted, so that URL is absent from `real_run.sh`
 - `--preview` never includes `--preview` in the output command(s)
-- Non-default flags (`--model`, `--language`, `--output`, `--keep-audio`, `--stable`, `--vad`) are preserved in both commands
+- Non-default flags (`--model`, `--language`, `--output`, `--keep-audio`, `--stable`, `--vad`, `--prompt-file`) are preserved in output commands (`--prompt-file` is included in translate commands only)
 - Informational output goes to **stderr**; only the command(s) go to **stdout** (enables clean piping)
 
 ## Output Format

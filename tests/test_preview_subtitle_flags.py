@@ -1357,3 +1357,51 @@ class TestPreviewNoSubtitlesPrompt:
         assert result.exit_code == 0, result.output
         assert '--action transcribe' in result.output
         assert '--action translate' in result.output
+
+
+class TestPromptFileInPreviewCommands:
+    """Tests that --prompt-file is passed through to preview output commands."""
+
+    def test_build_preview_command_includes_prompt_file(self):
+        """_build_preview_command should include --prompt-file when provided."""
+        cmd = main._build_preview_command(
+            'https://youtube.com/watch?v=abc123', 1, 'medium', None, None,
+            False, False, False, prompt_file='glossary.txt',
+        )
+        assert '--prompt-file glossary.txt' in cmd
+
+    def test_build_preview_command_omits_prompt_file_when_none(self):
+        """_build_preview_command should not include --prompt-file when not provided."""
+        cmd = main._build_preview_command(
+            'https://youtube.com/watch?v=abc123', 1, 'medium', None, None,
+            False, False, False,
+        )
+        assert '--prompt-file' not in cmd
+
+    def test_build_translate_command_includes_prompt_file(self):
+        """_build_translate_command should include --prompt-file when provided."""
+        cmd = main._build_translate_command(
+            'test.srt', None, None, prompt_file='glossary.txt',
+        )
+        assert '--prompt-file glossary.txt' in cmd
+
+    def test_build_translate_command_omits_prompt_file_when_none(self):
+        """_build_translate_command should not include --prompt-file when not provided."""
+        cmd = main._build_translate_command('test.srt', None, None)
+        assert '--prompt-file' not in cmd
+
+    def test_build_transcribe_command_never_includes_prompt_file(self):
+        """_build_transcribe_command should never include --prompt-file."""
+        cmd = main._build_transcribe_command(
+            'https://youtube.com/watch?v=abc123', 'medium', None, None,
+            False, False, False,
+        )
+        assert '--prompt-file' not in cmd
+
+    def test_prompt_file_with_spaces_is_quoted(self):
+        """Prompt file paths with spaces should be shell-quoted."""
+        cmd = main._build_preview_command(
+            'https://youtube.com/watch?v=abc123', 1, 'medium', None, None,
+            False, False, False, prompt_file='my glossary.txt',
+        )
+        assert "--prompt-file 'my glossary.txt'" in cmd
