@@ -404,6 +404,39 @@ Notes:
 - Non-default flags (`--model`, `--language`, `--output`, `--keep-audio`, `--stable`, `--vad`, `--prompt-file`) are preserved in output commands (`--prompt-file` is included in translate commands only)
 - Informational output goes to **stderr**; only the command(s) go to **stdout** (enables clean piping)
 
+#### Non-Interactive Preview (`--preview-opt`)
+
+Use `--preview-opt` to drive preview mode without interactive prompts, enabling automation via external systems (e.g., a Telegram bot or API).
+
+`--preview-opt` implies `--preview` automatically. Values:
+
+| Value | Behavior |
+|-------|----------|
+| `L`   | Output a JSON object with available subtitles, video title, and channel |
+| `S`   | Skip the video (emit nothing) |
+| `0`   | Emit the transcribe command |
+| `N`   | Emit the command for subtitle index N |
+
+**List available subtitles (JSON):**
+```bash
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview-opt L
+```
+```json
+{"url": "https://youtube.com/watch?v=VIDEO_ID", "video_title": "Some Video", "channel": "SomeChannel", "subtitles": [{"index": 1, "lang": "en", "name": "English"}], "can_transcribe": true}
+```
+
+**Select a subtitle non-interactively:**
+```bash
+# Get command for subtitle index 1
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview-opt 1
+
+# Get transcribe command
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview-opt 0
+
+# Skip the video
+uv run python main.py "https://youtube.com/watch?v=VIDEO_ID" --preview-opt S
+```
+
 ## Output Format
 
 ### SRT Format (video.srt)

@@ -721,7 +721,14 @@ def run_system_check():
     default=None,
     help='Text file with extra instructions for the translation model (e.g., glossary, style guide).'
 )
-def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad, subtitle, preview, action, prompt_file):
+@click.option(
+    '--preview-opt',
+    'preview_opt',
+    type=str,
+    default=None,
+    help='Non-interactive preview selection: L=list subtitles (JSON), S=skip, 0=transcribe, N=subtitle index. Implies --preview.'
+)
+def main(data_input, model, language, output, keep_audio, yes, check_system, stable, vad, subtitle, preview, action, prompt_file, preview_opt):
     """
     Extract subtitles from DATA_INPUT (file path, URL, or SRT file) using AI transcription.
 
@@ -751,6 +758,18 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
     # data_input is required for normal operation
     if data_input is None:
         raise click.UsageError("Missing argument 'DATA_INPUT'.")
+
+    # --preview-opt implies --preview and validates the value
+    if preview_opt is not None:
+        preview_opt = preview_opt.lower()
+        if preview_opt not in ('l', 's') and not preview_opt.isdigit():
+            raise click.UsageError(
+                f"Invalid --preview-opt value: '{preview_opt}'. "
+                "Must be L (list), S (skip), 0 (transcribe), or a subtitle index number."
+            )
+        if preview_opt.isdigit():
+            preview_opt = int(preview_opt)
+        preview = True
 
     try:
         # Load config for output directory settings
@@ -819,6 +838,22 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                 subtitles_checked = True
                 subtitle_list = list(subtitles.items())
 
+                # --preview-opt L: output JSON list and exit early (before any menu output)
+                if preview_opt == 'l':
+                    import json
+                    data = {
+                        'url': data_input,
+                        'video_title': video_meta.get('title', ''),
+                        'channel': video_meta.get('channel', ''),
+                        'subtitles': [
+                            {'index': idx, 'lang': lang_code, 'name': info['name']}
+                            for idx, (lang_code, info) in enumerate(subtitle_list, 1)
+                        ],
+                        'can_transcribe': True,
+                    }
+                    click.echo(json.dumps(data))
+                    return
+
                 if subtitles:
                     video_label = format_video_label(video_meta, data_input)
                     click.echo(f"\nVideo: {video_label}", err=preview)
@@ -830,13 +865,27 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                     click.echo(f"  S. Skip this video", err=preview)
 
                     if preview:
-                        # Prompt goes to stderr so only the command(s) reach stdout
-                        choice = click.prompt(
-                            "\nWhich subtitle would you like? (0-N, or S to skip)",
-                            type=SubtitleChoice(len(subtitle_list)),
-                            default='0',
-                            err=True,
-                        )
+                        if preview_opt is not None:
+                            # Non-interactive: --preview-opt provides the choice
+                            if preview_opt == 's':
+                                return  # Skip: emit nothing to stdout
+                            else:
+                                choice = preview_opt  # int: 0 or subtitle index
+                                if isinstance(choice, int) and choice > len(subtitle_list):
+                                    click.echo(
+                                        f"Error: --preview-opt {choice} is out of range. "
+                                        f"Only {len(subtitle_list)} subtitle(s) available.",
+                                        err=True,
+                                    )
+                                    sys.exit(1)
+                        else:
+                            # Interactive: prompt goes to stderr so only the command(s) reach stdout
+                            choice = click.prompt(
+                                "\nWhich subtitle would you like? (0-N, or S to skip)",
+                                type=SubtitleChoice(len(subtitle_list)),
+                                default='0',
+                                err=True,
+                            )
                         if choice == 's':
                             return  # Skip: emit nothing to stdout
                         comment = f"# {format_video_label(video_meta, data_input)}"
@@ -931,20 +980,33 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                 else:
                     # No subtitles available
                     if preview:
-                        video_label = format_video_label(video_meta, data_input)
-                        click.echo(f"\nVideo: {video_label}", err=True)
-                        click.echo(f"\nNo subtitles available.", err=True)
-                        click.echo(f"  0. Transcribe video", err=True)
-                        click.echo(f"  S. Skip this video", err=True)
+                        if preview_opt is not None:
+                            # Non-interactive: --preview-opt provides the choice
+                            if preview_opt == 's':
+                                return  # Skip: emit nothing to stdout
+                            elif isinstance(preview_opt, int) and preview_opt > 0:
+                                click.echo(
+                                    f"Error: --preview-opt {preview_opt} is invalid. "
+                                    f"No subtitles available for this URL.",
+                                    err=True,
+                                )
+                                sys.exit(1)
+                            # preview_opt == 0: fall through to transcribe
+                        else:
+                            video_label = format_video_label(video_meta, data_input)
+                            click.echo(f"\nVideo: {video_label}", err=True)
+                            click.echo(f"\nNo subtitles available.", err=True)
+                            click.echo(f"  0. Transcribe video", err=True)
+                            click.echo(f"  S. Skip this video", err=True)
 
-                        choice = click.prompt(
-                            "\nTranscribe or skip? (0 or S)",
-                            type=SubtitleChoice(0),
-                            default='0',
-                            err=True,
-                        )
-                        if choice == 's':
-                            return  # Skip: emit nothing to stdout
+                            choice = click.prompt(
+                                "\nTranscribe or skip? (0 or S)",
+                                type=SubtitleChoice(0),
+                                default='0',
+                                err=True,
+                            )
+                            if choice == 's':
+                                return  # Skip: emit nothing to stdout
 
                         comment = f"# {format_video_label(video_meta, data_input)}"
                         click.echo(comment)

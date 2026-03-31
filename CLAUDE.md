@@ -97,6 +97,7 @@ Settings are configured in `config.json` at the project root.
 - `--stable`: Use stable-ts for better timestamp accuracy (requires: `uv sync --extra stable`)
 - `--vad`: Enable VAD to reduce hallucinations in silence (requires: `--stable`)
 - `--prompt-file`: Path to a text file with extra instructions for the translation model (e.g., glossary, style guide)
+- `--preview-opt`: Non-interactive preview selection (`L`=list JSON, `S`=skip, `0`=transcribe, `N`=subtitle index). Implies `--preview`.
 - `--action`: Action to perform: `transcribe` (skip translation entirely) or `translate` (SRT input only, skip transcription). Default: both (prompt for translation after transcribing)
   - `--action transcribe` — transcribe only, no translation prompt
   - `--action translate` — requires SRT file as input, goes directly to translation
@@ -119,6 +120,7 @@ whisper-subtitle-cli/
 │   ├── test_audio_extractor.py
 │   ├── test_video_downloader.py
 │   ├── test_translator.py
+│   ├── test_preview_opt.py
 │   └── test_main_integration.py
 ├── pyproject.toml
 ├── uv.lock                 # uv lock file
@@ -271,6 +273,8 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Sliding context window for translation — `ollama.context_lines` (default 3) passes last N translated pairs as read-only context between batches (see `plan/PLAN-sliding-context-window.md`)
 - `--preview` with no subtitles now prompts to transcribe or skip (instead of auto-transcribing), so users can skip videos that don't need transcription (e.g., Chinese videos)
 - `--prompt-file` flag for custom translation instructions (glossary, style guide, terminology) — injected as `[Additional instructions:]` block in all translation prompts
+- `--prompt-file` now passed through to `--preview` output commands (translate and single-phase only, not transcribe-only)
+- `--preview-opt` flag for non-interactive preview: `L` (JSON list), `S` (skip), `0` (transcribe), `N` (subtitle index). Implies `--preview`. Enables external automation (Telegram bot, API).
 
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
@@ -280,9 +284,12 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Web interface
 
 ### Next Session
-- Run `uv run pytest -v` to verify clean state (217 passed, 7 skipped as of last session)
+- Run `uv run pytest -v` to verify clean state (242 passed, 7 skipped as of last session)
 - The 7 skipped tests are `stable-ts` related — they skip automatically when `stable-ts` is not installed (optional dep). Run `uv sync --extra stable` to enable them.
 - `config.json` has uncommitted local changes (user's personal model/output settings) — leave as-is
 - `scripts/` directory moved to `~/claude/automation-scripts/` (separate repo, shared env.sh pattern for cron-friendly absolute paths). The old `scripts/` is gitignored and removed from this project.
 - `.gitignore` has an uncommitted change adding `scripts/` — can be committed or left as-is (the directory no longer exists here)
 - Consider adding `ollama.prompt_file` config option as an alternative to CLI flag (not yet implemented)
+- `--preview-opt` is implemented — next logical step is building the Telegram bot that uses it (query with `L`, present options, select with `0`/`N`/`S`)
+- Click limitation: `--preview` cannot take an optional argument natively. That's why `--preview-opt` is a separate option (see `plan/PLAN-preview-opt.md` for design rationale)
+- `tests/test_preview_opt.py` added with 19 tests; file has minor Pyright warnings for unused mock variables (cosmetic only)
