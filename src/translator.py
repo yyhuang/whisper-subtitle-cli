@@ -210,6 +210,7 @@ class OllamaTranslator:
         self.context_lines = context_lines if context_lines is not None else config['ollama'].get('context_lines', 3)
         if custom_prompt is not None:
             self.custom_prompt = custom_prompt
+            self.prompt_file_source = None
         else:
             config_prompt_file = config['ollama'].get('prompt_file')
             if config_prompt_file:
@@ -217,10 +218,13 @@ class OllamaTranslator:
                 if p.exists():
                     text = p.read_text().strip()
                     self.custom_prompt = text if text else None
+                    self.prompt_file_source = config_prompt_file if self.custom_prompt else None
                 else:
                     self.custom_prompt = None
+                    self.prompt_file_source = None
             else:
                 self.custom_prompt = None
+                self.prompt_file_source = None
 
     def _is_translategemma(self) -> bool:
         """Check if the current model is TranslateGemma."""

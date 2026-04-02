@@ -334,6 +334,8 @@ def translate_subtitles(segments, srt_path, output_dir, date_prefix, base_name, 
 
     # Check Ollama connection
     translator = OllamaTranslator(custom_prompt=custom_prompt)
+    if translator.prompt_file_source:
+        click.echo(f"Using config prompt file: {translator.prompt_file_source}")
     if not translator.check_connection():
         click.echo(
             f"\n❌ Cannot connect to Ollama at {config['ollama']['base_url']}. "

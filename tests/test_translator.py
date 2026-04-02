@@ -1003,6 +1003,62 @@ class TestPromptFileConfig:
             translator = OllamaTranslator()
         assert translator.custom_prompt == prompt_content
 
+    def test_translator_stores_prompt_file_source_from_config(self, tmp_path):
+        """prompt_file_source is set to config path when loaded from config."""
+        prompt_path = tmp_path / "glossary.txt"
+        prompt_path.write_text("Some instructions")
+
+        config = {
+            "ollama": {
+                "model": "test",
+                "base_url": "http://localhost:11434",
+                "batch_size": 50,
+                "keep_alive": "10m",
+                "context_lines": 3,
+                "prompt_file": str(prompt_path),
+            },
+            "output": {"directory": None},
+        }
+        with patch('src.translator.load_config', return_value=config):
+            translator = OllamaTranslator()
+        assert translator.prompt_file_source == str(prompt_path)
+
+    def test_translator_prompt_file_source_none_when_cli(self, tmp_path):
+        """prompt_file_source is None when custom_prompt is passed directly."""
+        prompt_path = tmp_path / "glossary.txt"
+        prompt_path.write_text("Config content")
+
+        config = {
+            "ollama": {
+                "model": "test",
+                "base_url": "http://localhost:11434",
+                "batch_size": 50,
+                "keep_alive": "10m",
+                "context_lines": 3,
+                "prompt_file": str(prompt_path),
+            },
+            "output": {"directory": None},
+        }
+        with patch('src.translator.load_config', return_value=config):
+            translator = OllamaTranslator(custom_prompt="CLI content")
+        assert translator.prompt_file_source is None
+
+    def test_translator_prompt_file_source_none_when_no_config(self):
+        """prompt_file_source is None when no prompt_file in config."""
+        config = {
+            "ollama": {
+                "model": "test",
+                "base_url": "http://localhost:11434",
+                "batch_size": 50,
+                "keep_alive": "10m",
+                "context_lines": 3,
+            },
+            "output": {"directory": None},
+        }
+        with patch('src.translator.load_config', return_value=config):
+            translator = OllamaTranslator()
+        assert translator.prompt_file_source is None
+
     def test_translator_explicit_custom_prompt_overrides_config(self, tmp_path):
         """Explicit custom_prompt arg takes precedence over config prompt_file."""
         prompt_path = tmp_path / "glossary.txt"
