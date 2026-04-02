@@ -164,7 +164,8 @@ def load_config() -> dict:
             "batch_size": 50,
             "keep_alive": "10m",
             "auto_unload": False,
-            "context_lines": 3
+            "context_lines": 3,
+            "prompt_file": None
         },
         "output": {
             "directory": None  # None means use default locations
@@ -207,7 +208,19 @@ class OllamaTranslator:
         self.batch_size = batch_size or config['ollama'].get('batch_size', 50)
         self.keep_alive = keep_alive or config['ollama'].get('keep_alive', '10m')
         self.context_lines = context_lines if context_lines is not None else config['ollama'].get('context_lines', 3)
-        self.custom_prompt = custom_prompt
+        if custom_prompt is not None:
+            self.custom_prompt = custom_prompt
+        else:
+            config_prompt_file = config['ollama'].get('prompt_file')
+            if config_prompt_file:
+                p = Path(config_prompt_file)
+                if p.exists():
+                    text = p.read_text().strip()
+                    self.custom_prompt = text if text else None
+                else:
+                    self.custom_prompt = None
+            else:
+                self.custom_prompt = None
 
     def _is_translategemma(self) -> bool:
         """Check if the current model is TranslateGemma."""

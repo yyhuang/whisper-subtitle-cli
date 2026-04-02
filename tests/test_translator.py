@@ -963,6 +963,104 @@ class TestCustomPrompt:
         assert custom_pos < numbered_pos
 
 
+class TestPromptFileConfig:
+    """Tests for ollama.prompt_file config option."""
+
+    def test_load_config_prompt_file_default_none(self):
+        """prompt_file defaults to None when not in config."""
+        with patch('src.translator.Path.exists', return_value=False):
+            config = load_config()
+        assert config['ollama'].get('prompt_file') is None
+
+    def test_load_config_prompt_file_from_file(self):
+        """prompt_file is loaded from config.json when present."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump({"ollama": {"prompt_file": "prompts/glossary.txt"}}, f)
+            f.flush()
+            with patch.object(Path, 'exists', return_value=True):
+                with patch('builtins.open', Mock(return_value=open(f.name))):
+                    config = load_config()
+        assert config['ollama']['prompt_file'] == 'prompts/glossary.txt'
+
+    def test_translator_uses_config_prompt_file(self, tmp_path):
+        """OllamaTranslator reads prompt_file from config when custom_prompt not passed."""
+        prompt_content = "Use formal tone.\nGlossary: API=介面"
+        prompt_path = tmp_path / "glossary.txt"
+        prompt_path.write_text(prompt_content)
+
+        config = {
+            "ollama": {
+                "model": "test",
+                "base_url": "http://localhost:11434",
+                "batch_size": 50,
+                "keep_alive": "10m",
+                "context_lines": 3,
+                "prompt_file": str(prompt_path),
+            },
+            "output": {"directory": None},
+        }
+        with patch('src.translator.load_config', return_value=config):
+            translator = OllamaTranslator()
+        assert translator.custom_prompt == prompt_content
+
+    def test_translator_explicit_custom_prompt_overrides_config(self, tmp_path):
+        """Explicit custom_prompt arg takes precedence over config prompt_file."""
+        prompt_path = tmp_path / "glossary.txt"
+        prompt_path.write_text("Config prompt content")
+
+        config = {
+            "ollama": {
+                "model": "test",
+                "base_url": "http://localhost:11434",
+                "batch_size": 50,
+                "keep_alive": "10m",
+                "context_lines": 3,
+                "prompt_file": str(prompt_path),
+            },
+            "output": {"directory": None},
+        }
+        with patch('src.translator.load_config', return_value=config):
+            translator = OllamaTranslator(custom_prompt="CLI prompt content")
+        assert translator.custom_prompt == "CLI prompt content"
+
+    def test_translator_config_prompt_file_missing_file_ignored(self):
+        """Non-existent prompt_file in config is silently ignored."""
+        config = {
+            "ollama": {
+                "model": "test",
+                "base_url": "http://localhost:11434",
+                "batch_size": 50,
+                "keep_alive": "10m",
+                "context_lines": 3,
+                "prompt_file": "/nonexistent/path/glossary.txt",
+            },
+            "output": {"directory": None},
+        }
+        with patch('src.translator.load_config', return_value=config):
+            translator = OllamaTranslator()
+        assert translator.custom_prompt is None
+
+    def test_translator_config_prompt_file_empty_file_ignored(self, tmp_path):
+        """Empty prompt file in config results in None custom_prompt."""
+        prompt_path = tmp_path / "empty.txt"
+        prompt_path.write_text("   \n  ")
+
+        config = {
+            "ollama": {
+                "model": "test",
+                "base_url": "http://localhost:11434",
+                "batch_size": 50,
+                "keep_alive": "10m",
+                "context_lines": 3,
+                "prompt_file": str(prompt_path),
+            },
+            "output": {"directory": None},
+        }
+        with patch('src.translator.load_config', return_value=config):
+            translator = OllamaTranslator()
+        assert translator.custom_prompt is None
+
+
 class TestUnloadAllModels:
     """Tests for the unload_all_models function."""
 

@@ -57,7 +57,8 @@ Settings are configured in `config.json` at the project root.
     "batch_size": 50,
     "keep_alive": "10m",
     "auto_unload": false,
-    "context_lines": 3
+    "context_lines": 3,
+    "prompt_file": "prompts/translation-terms.txt"
   },
   "output": {
     "directory": "/path/to/subtitles"
@@ -76,6 +77,7 @@ Settings are configured in `config.json` at the project root.
 - **base_url**: Ollama API URL, can point to remote Ollama server (default: `http://localhost:11434`)
 - **batch_size**: Number of segments to translate per API call (default: `50`)
 - **context_lines**: Number of prior translated segment pairs to include as read-only context in each batch prompt (default: `3`, set `0` to disable). Helps maintain consistency in pronouns, terminology, and tone across batch boundaries.
+- **prompt_file**: Path to a text file with extra translation instructions (e.g., glossary, style guide). Loaded automatically on every translation — no need for `--prompt-file` CLI flag. CLI `--prompt-file` takes precedence if both are set.
 - **keep_alive**: How long to keep the model loaded in memory after a request (default: `10m`)
   - `"5m"`, `"10m"`, `"1h"` - duration values
   - `"-1"` - keep loaded indefinitely
@@ -275,6 +277,7 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - `--prompt-file` flag for custom translation instructions (glossary, style guide, terminology) — injected as `[Additional instructions:]` block in all translation prompts
 - `--prompt-file` now passed through to `--preview` output commands (translate and single-phase only, not transcribe-only)
 - `--preview-opt` flag for non-interactive preview: `L` (JSON list), `S` (skip), `0` (transcribe), `N` (subtitle index). Implies `--preview`. Enables external automation (Telegram bot, API).
+- `ollama.prompt_file` config option — auto-loads translation instructions (glossary, style guide) without needing `--prompt-file` CLI flag every time. CLI flag takes precedence if both set.
 
 ### Future (Optional Enhancements)
 - Add support for batch processing multiple videos/URLs
@@ -284,12 +287,12 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Web interface
 
 ### Next Session
-- Run `uv run pytest -v` to verify clean state (242 passed, 7 skipped as of last session)
+- Run `uv run pytest -v` to verify clean state (248 passed, 7 skipped as of last session)
 - The 7 skipped tests are `stable-ts` related — they skip automatically when `stable-ts` is not installed (optional dep). Run `uv sync --extra stable` to enable them.
-- `config.json` has uncommitted local changes (user's personal model/output settings) — leave as-is
+- `config.json` has uncommitted local changes (user's personal model/output settings, including `prompt_file`) — leave as-is
 - `scripts/` directory moved to `~/claude/automation-scripts/` (separate repo, shared env.sh pattern for cron-friendly absolute paths). The old `scripts/` is gitignored and removed from this project.
 - `.gitignore` has an uncommitted change adding `scripts/` — can be committed or left as-is (the directory no longer exists here)
-- Consider adding `ollama.prompt_file` config option as an alternative to CLI flag (not yet implemented)
 - `--preview-opt` is implemented — next logical step is building the Telegram bot that uses it (query with `L`, present options, select with `0`/`N`/`S`)
 - Click limitation: `--preview` cannot take an optional argument natively. That's why `--preview-opt` is a separate option (see `plan/PLAN-preview-opt.md` for design rationale)
 - `tests/test_preview_opt.py` added with 19 tests; file has minor Pyright warnings for unused mock variables (cosmetic only)
+- `prompts/super-junior-tw.txt` exists with SJ member name glossary + style guide (~1.3KB, ~400 tokens — negligible overhead per batch)
