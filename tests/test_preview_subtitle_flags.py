@@ -1405,3 +1405,71 @@ class TestPromptFileInPreviewCommands:
             False, False, False, prompt_file='my glossary.txt',
         )
         assert "--prompt-file 'my glossary.txt'" in cmd
+
+
+class TestPreviewPhase2SrtPathIsRelative:
+    """Phase 2 SRT path must not bake in the preview machine's cwd.
+
+    The bot runs --preview inside Docker (cwd /opt/video-subtitle), but the run
+    script executes on the host after `cd` into whisper-subtitle-cli. With no
+    output directory configured, the SRT lands in the run-time cwd, so the
+    translate command should use a bare filename.
+    """
+
+    @pytest.fixture(autouse=True)
+    def enable_auto_unload(self):
+        config = {
+            'ollama': {
+                'model': 'translategemma:4b',
+                'base_url': 'http://localhost:11434',
+                'batch_size': 50,
+                'keep_alive': '10m',
+                'auto_unload': True,
+            },
+            'output': {'directory': None},
+        }
+        with patch('main.load_config', return_value=config):
+            yield
+
+    def _mock_downloader(self, mock_downloader, subtitles):
+        mock_instance = MagicMock()
+        mock_downloader.return_value = mock_instance
+        mock_instance.get_available_subtitles.return_value = (
+            subtitles, {'title': 'Test Video', 'channel': 'Test Channel'},
+        )
+        mock_instance.get_video_info.return_value = {
+            'video_id': 'abc123', 'upload_date': '20200101',
+        }
+
+    def _translate_cmd(self, output: str) -> str:
+        cmds = [l for l in output.strip().split('\n') if 'main.py' in l]
+        return cmds[1]
+
+    @patch('main.VideoDownloader')
+    def test_interactive_preview_uses_bare_filename(self, mock_downloader):
+        self._mock_downloader(mock_downloader, {})
+        result = CliRunner().invoke(
+            main.main, ['https://youtube.com/watch?v=abc123', '--preview'], input='0\n',
+        )
+        assert result.exit_code == 0, result.output
+        assert 'main.py 20200101_abc123.srt -y' in self._translate_cmd(result.output)
+
+    @patch('main.VideoDownloader')
+    def test_preview_opt_0_uses_bare_filename(self, mock_downloader):
+        self._mock_downloader(mock_downloader, {'en': {'name': 'English'}})
+        result = CliRunner().invoke(
+            main.main, ['https://youtube.com/watch?v=abc123', '--preview-opt', '0'],
+        )
+        assert result.exit_code == 0, result.output
+        assert 'main.py 20200101_abc123.srt -y' in self._translate_cmd(result.output)
+
+    @patch('main.VideoDownloader')
+    def test_configured_output_dir_still_used(self, mock_downloader, tmp_path):
+        self._mock_downloader(mock_downloader, {})
+        result = CliRunner().invoke(
+            main.main,
+            ['https://youtube.com/watch?v=abc123', '--preview', '--output', str(tmp_path)],
+            input='0\n',
+        )
+        assert result.exit_code == 0, result.output
+        assert str(tmp_path / '20200101_abc123.srt') in self._translate_cmd(result.output)

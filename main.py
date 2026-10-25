@@ -899,7 +899,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                                 video_info = downloader.get_video_info(data_input)
                                 video_id = video_info['video_id']
                                 date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
-                                output_dir = get_output_directory(output, config, Path.cwd())
+                                output_dir = get_output_directory(output, config, Path('.'))  # relative: run script cd's into this repo
                                 srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
                                 click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
                                 click.echo(_build_translate_command(srt_path, output, language, prompt_file=prompt_file))
@@ -1018,7 +1018,7 @@ def main(data_input, model, language, output, keep_audio, yes, check_system, sta
                             video_info = downloader.get_video_info(data_input)
                             video_id = video_info['video_id']
                             date_prefix = get_date_prefix(upload_date=video_info.get('upload_date'))
-                            output_dir = get_output_directory(output, config, Path.cwd())
+                            output_dir = get_output_directory(output, config, Path('.'))  # relative: run script cd's into this repo
                             srt_path = str(output_dir / f"{date_prefix}_{video_id}.srt")
                             click.echo(_build_transcribe_command(data_input, model, language, output, keep_audio, stable, vad))
                             click.echo(_build_translate_command(srt_path, output, language, prompt_file=prompt_file))

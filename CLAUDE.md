@@ -296,3 +296,7 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Click limitation: `--preview` cannot take an optional argument natively. That's why `--preview-opt` is a separate option (see `plan/PLAN-preview-opt.md` for design rationale)
 - `tests/test_preview_opt.py` added with 19 tests; file has minor Pyright warnings for unused mock variables (cosmetic only)
 - `prompts/super-junior-tw.txt` exists with SJ member name glossary + style guide (~1.3KB, ~400 tokens — negligible overhead per batch)
+
+## Session Notes (2026-10-25)
+- `--preview` two-phase (auto_unload) URL commands now emit a relative SRT path (e.g. `20261023_<id>.srt`) when no output dir is set. Before, it used the absolute `Path.cwd()` of the preview process — telegram-portal runs preview in Docker (cwd `/opt/video-subtitle`), so host run scripts failed with "File not found: /opt/video-subtitle/...". Run scripts `cd` into this repo, so the relative path resolves correctly.
+- 2 tests in `tests/test_translator.py::TestCustomPrompt` fail locally because of the user's `config.json` `prompt_file` setting (pre-existing, not a code bug)
