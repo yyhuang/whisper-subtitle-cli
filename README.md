@@ -39,7 +39,7 @@ uv run python main.py existing.srt
 - **Unattended Mode**: Use `--yes` flag to auto-translate after transcription completes
 - **Batch Scripting**: Use `--preview` + `--subtitle N` to automate subtitle selection across many URLs
 - **Multiple Languages**: Auto-detects language or accepts manual specification
-- **Flexible Models**: Choose from 5 Whisper model sizes balancing speed vs accuracy
+- **Flexible Models**: Choose from 6 Whisper models (default: turbo) balancing speed vs accuracy
 
 ## Installation
 
@@ -125,8 +125,9 @@ uv run python main.py "https://vimeo.com/123456"
 | tiny | ~39MB | Fastest | Basic | Quick tests, simple audio |
 | base | ~140MB | Fast | Good | Faster alternative |
 | small | ~470MB | Moderate | Better | Clear speech, important content |
-| medium | ~1.5GB | Slow | High | **Default - Professional use** |
-| large | ~2.9GB | Slowest | Best | Maximum accuracy needed |
+| medium | ~1.5GB | Slow | High | Older default |
+| large | ~2.9GB | Slowest | Best | Maximum accuracy, hard audio |
+| turbo | ~1.6GB | Fast | Near-best | **Default** - large-v3-turbo, ~8x faster than large |
 
 ### Language Codes
 

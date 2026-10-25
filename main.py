@@ -44,6 +44,7 @@ CUDA_VERSIONS = {
 # Default CUDA version for Windows (used in pyproject.toml)
 # Change this when updating the default, and update pyproject.toml to match
 DEFAULT_CUDA = "cu121"
+DEFAULT_WHISPER_MODEL = "turbo"
 
 
 class DataInput(click.ParamType):
@@ -106,7 +107,7 @@ def _build_preview_command(
     parts.append(f'--subtitle {subtitle_choice}')
     parts.append('-y')
 
-    if model != 'medium':
+    if model != DEFAULT_WHISPER_MODEL:
         parts.append(f'--model {model}')
     if language is not None:
         parts.append(f'--language {language}')
@@ -140,7 +141,7 @@ def _build_transcribe_command(
     parts.append('--subtitle 0')
     parts.append('--action transcribe')
 
-    if model != 'medium':
+    if model != DEFAULT_WHISPER_MODEL:
         parts.append(f'--model {model}')
     if language is not None:
         parts.append(f'--language {language}')
@@ -653,8 +654,8 @@ def run_system_check():
 @click.argument('data_input', type=DataInput(), required=False)
 @click.option(
     '--model',
-    default='medium',
-    type=click.Choice(['tiny', 'base', 'small', 'medium', 'large'], case_sensitive=False),
+    default=DEFAULT_WHISPER_MODEL,
+    type=click.Choice(['tiny', 'base', 'small', 'medium', 'large', 'turbo'], case_sensitive=False),
     help='Whisper model size (larger = more accurate but slower)'
 )
 @click.option(

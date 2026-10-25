@@ -308,10 +308,11 @@ The **first time you run** the tool, it will automatically download the Whisper 
 | `tiny` | ~39MB | ~1GB | Basic | Fastest |
 | `base` | ~140MB | ~1GB | Good | Fast |
 | `small` | ~470MB | ~2GB | Better | Medium |
-| `medium` | ~1.5GB | ~5GB | High (default) | Slow |
+| `medium` | ~1.5GB | ~5GB | High | Slow |
 | `large` | ~2.9GB | ~10GB | Best | Slowest |
+| `turbo` | ~1.6GB | ~6GB | Near-best (default) | Fast |
 
-The default `medium` model offers a good balance. Use `--model tiny` or `--model base` for faster processing or if you have limited RAM.
+The default `turbo` model (large-v3-turbo) is faster and more accurate than `medium`. Use `--model large` for difficult audio (noise, music, overlapping speech). Use `--model tiny` or `--model base` for faster processing or if you have limited RAM.
 
 ---
 

@@ -14,10 +14,15 @@ class TestTranscriber:
         transcriber = Transcriber(model_size="tiny")
         assert transcriber.model_size == "tiny"
 
-    def test_transcriber_default_model_is_medium(self):
-        """Test that default model is 'medium'."""
+    def test_transcriber_default_model_is_turbo(self):
+        """Test that default model is 'turbo' (large-v3-turbo)."""
         transcriber = Transcriber()
-        assert transcriber.model_size == "medium"
+        assert transcriber.model_size == "turbo"
+
+    def test_mlx_model_map_has_turbo(self):
+        """Test that turbo maps to the MLX large-v3-turbo repo."""
+        from src.transcriber import MLX_MODEL_MAP
+        assert MLX_MODEL_MAP["turbo"] == "mlx-community/whisper-large-v3-turbo"
 
     def test_transcribe_returns_segments(self):
         """Test that transcribe method exists and has correct signature."""

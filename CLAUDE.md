@@ -90,7 +90,7 @@ Settings are configured in `config.json` at the project root.
 **Note:** Only Ollama API is supported. Other APIs (OpenAI, Claude, etc.) are not compatible.
 
 ### CLI Options
-- `--model`: Whisper model size: tiny, base, small, medium, large (default: medium)
+- `--model`: Whisper model size: tiny, base, small, medium, large, turbo (default: turbo = large-v3-turbo)
 - `--language`: Source language code for transcription (e.g., en, zh, es). Auto-detect if not specified.
 - `--output`, `-o`: Output directory for subtitle files
 - `--keep-audio`: Keep the extracted audio file (WAV)
@@ -287,7 +287,7 @@ When updating to a new PyTorch version (e.g., 2.6.0):
 - Web interface
 
 ### Next Session
-- Run `uv run pytest -v` to verify clean state (251 passed, 7 skipped as of last session)
+- Run `uv run pytest -v` to verify clean state (256 passed, 7 skipped as of last session)
 - The 7 skipped tests are `stable-ts` related — they skip automatically when `stable-ts` is not installed (optional dep). Run `uv sync --extra stable` to enable them.
 - `config.json` has uncommitted local changes (user's personal model/output settings, including `prompt_file`) — leave as-is
 - `scripts/` directory moved to `~/claude/automation-scripts/` (separate repo, shared env.sh pattern for cron-friendly absolute paths). The old `scripts/` is gitignored and removed from this project.

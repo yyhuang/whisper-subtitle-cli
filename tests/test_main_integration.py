@@ -641,3 +641,32 @@ class TestSkipOptionInSubtitleMenu:
 
             assert result.exit_code == 0
             assert 'Skip' in result.output or 'skip' in result.output.lower()
+
+
+class TestModelOption:
+    """Tests for the --model option (turbo support and default)."""
+
+    def test_help_lists_turbo(self):
+        result = CliRunner().invoke(main.main, ['--help'])
+        assert 'turbo' in result.output
+
+    @pytest.mark.parametrize('args, expected', [
+        ([], 'turbo'),
+        (['--model', 'turbo'], 'turbo'),
+        (['--model', 'medium'], 'medium'),
+    ])
+    @patch('main.AudioExtractor')
+    @patch('main.Transcriber')
+    @patch('main.SubtitleWriter')
+    def test_model_passed_to_transcriber(self, mock_writer, mock_transcriber, mock_extractor, args, expected):
+        mock_transcriber.return_value.transcribe.return_value = [
+            {'start': 0.0, 'end': 2.0, 'text': 'Test'}
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = Path(tmpdir) / 'test_video.mp4'
+            video_path.touch()
+            result = CliRunner().invoke(
+                main.main, [str(video_path), '--action', 'transcribe', *args]
+            )
+            assert result.exit_code == 0, result.output
+            assert mock_transcriber.call_args.kwargs['model_size'] == expected

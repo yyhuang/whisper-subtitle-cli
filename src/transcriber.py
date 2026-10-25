@@ -8,19 +8,20 @@ MLX_MODEL_MAP = {
     "small": "mlx-community/whisper-small-mlx",
     "medium": "mlx-community/whisper-medium-mlx",
     "large": "mlx-community/whisper-large-v3-mlx",
+    "turbo": "mlx-community/whisper-large-v3-turbo",
 }
 
 
 class Transcriber:
     """Transcribes audio files using openai-whisper, mlx-whisper, or stable-ts."""
 
-    def __init__(self, model_size: str = "medium", use_stable: bool = False, use_vad: bool = False):
+    def __init__(self, model_size: str = "turbo", use_stable: bool = False, use_vad: bool = False):
         """
         Initialize the transcriber with a Whisper model.
         Automatically detects the best backend and device.
 
         Args:
-            model_size: Size of the Whisper model (tiny, base, small, medium, large)
+            model_size: Size of the Whisper model (tiny, base, small, medium, large, turbo)
             use_stable: If True, use stable-ts for better timestamp accuracy
             use_vad: If True, enable Silero VAD to reduce hallucinations (requires --stable)
         """
@@ -119,7 +120,7 @@ class Transcriber:
         """Transcribe using mlx-whisper."""
         import mlx_whisper
 
-        model_repo = MLX_MODEL_MAP.get(self.model_size, MLX_MODEL_MAP["medium"])
+        model_repo = MLX_MODEL_MAP.get(self.model_size, MLX_MODEL_MAP["turbo"])
 
         kwargs = {"path_or_hf_repo": model_repo}
         if language:
@@ -174,7 +175,7 @@ class Transcriber:
         """Transcribe using stable-ts with MLX backend."""
         import stable_whisper
 
-        model_repo = MLX_MODEL_MAP.get(self.model_size, MLX_MODEL_MAP["medium"])
+        model_repo = MLX_MODEL_MAP.get(self.model_size, MLX_MODEL_MAP["turbo"])
 
         kwargs = {}
         if language:
